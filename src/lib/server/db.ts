@@ -157,3 +157,24 @@ export async function getMessagesByChat(db: D1Database, chatId: string): Promise
 		.all<Message>();
 	return result.results || [];
 }
+
+// チャットとメッセージを1クエリで取得（高速化）
+export async function getChatWithMessages(
+	db: D1Database,
+	chatId: string,
+	userId: string
+): Promise<{ chat: Chat; messages: Message[] } | null> {
+	// チャットの権限確認とメッセージ取得を1回のバッチで実行
+	const [chatResult, messagesResult] = await db.batch([
+		db.prepare('SELECT * FROM chats WHERE id = ? AND user_id = ?').bind(chatId, userId),
+		db.prepare('SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at ASC').bind(chatId)
+	]);
+
+	const chat = chatResult.results?.[0] as Chat | undefined;
+	if (!chat) return null;
+
+	return {
+		chat,
+		messages: (messagesResult.results as Message[]) || []
+	};
+}
