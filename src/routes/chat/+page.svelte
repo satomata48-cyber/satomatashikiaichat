@@ -43,12 +43,13 @@
 	let streamingContent = '';
 	let streamingReasoning = '';
 	let selectedProvider: Provider = 'together';
-	let selectedModel = 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
+	let selectedModel = 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free';
 	let showModelSelector = false;
 	let expandedReasoning: Set<string> = new Set();
 
 	const togetherModels: ModelInfo[] = [
-		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B', desc: '高性能・推奨', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
+		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free', name: 'Llama 3.3 70B Free', desc: '無料・推奨', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0, outputCost: 0 },
+		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B', desc: '高性能', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
 		{ id: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', name: 'Llama 3.1 8B', desc: '高速・軽量', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.18, outputCost: 0.18 },
 		{ id: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', name: 'Llama 3.1 70B', desc: '高性能', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
 		{ id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', name: 'Llama 3.1 405B', desc: '最高性能', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 3.50, outputCost: 3.50 },
@@ -111,7 +112,11 @@
 
 	// 1日あたりの会話回数を計算（1000円/月予算）
 	// 平均1会話あたり: 入力1000トークン + 出力500トークン と想定
-	function calcDailyConversations(model: ModelInfo): number {
+	function calcDailyConversations(model: ModelInfo): string {
+		// 無料モデルの場合
+		if (model.inputCost === 0 && model.outputCost === 0) {
+			return '無料';
+		}
 		const monthlyBudgetYen = 1000; // 1000円/月
 		const exchangeRate = 150; // 1ドル = 150円
 		const monthlyBudgetUsd = monthlyBudgetYen / exchangeRate; // 約$6.67
@@ -119,7 +124,7 @@
 		const avgInputTokens = 1000;
 		const avgOutputTokens = 500;
 		const costPerConversation = (model.inputCost * avgInputTokens / 1_000_000) + (model.outputCost * avgOutputTokens / 1_000_000);
-		return Math.floor(dailyBudget / costPerConversation);
+		return `約${Math.floor(dailyBudget / costPerConversation)}回/日`;
 	}
 
 	function selectProvider(provider: Provider) {
@@ -719,7 +724,7 @@
 												{#if model.reasoning}
 													<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
 												{/if}
-												<span class="text-xs text-dark-200 font-medium opacity-0 group-hover/model:opacity-100 transition-opacity whitespace-nowrap">約{calcDailyConversations(model)}回/日</span>
+												<span class="text-xs text-dark-200 font-medium opacity-0 group-hover/model:opacity-100 transition-opacity whitespace-nowrap">{calcDailyConversations(model)}</span>
 											</button>
 										{/each}
 									</div>
