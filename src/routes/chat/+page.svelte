@@ -633,19 +633,23 @@
 						{/if}
 					</button>
 
-					<!-- Image Generation Toggle -->
-					<button
-						on:click={() => { enableImageGen = !enableImageGen; if (enableImageGen) enableSearch = false; showImageModelSelector = false; }}
-						class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableImageGen ? 'bg-pink-600/20 border-pink-500/50 text-pink-400' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
-					>
-						<span class="text-base">🎨</span>
-						画像生成
-						{#if enableImageGen}
-							<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-								<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-							</svg>
-						{/if}
-					</button>
+					<!-- Mode Selector: Text / Image -->
+					<div class="flex items-center gap-1 p-1 bg-dark-800 rounded-lg">
+						<button
+							on:click={() => { enableImageGen = false; }}
+							class="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-colors {!enableImageGen ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
+						>
+							<span class="text-sm">💬</span>
+							テキスト
+						</button>
+						<button
+							on:click={() => { enableImageGen = true; enableSearch = false; }}
+							class="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-colors {enableImageGen ? 'bg-pink-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
+						>
+							<span class="text-sm">🎨</span>
+							画像
+						</button>
+					</div>
 
 					{#if enableImageGen}
 						<!-- Image Model Selector -->
