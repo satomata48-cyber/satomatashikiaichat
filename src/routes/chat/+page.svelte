@@ -67,6 +67,25 @@
 		{ id: 'moonshotai/kimi-k2', name: 'Kimi K2', desc: '推論特化', icon: '🌙', reasoning: true, longContext: true, contextLength: '128K', inputCost: 0.60, outputCost: 0.89 },
 	];
 
+	// 画像生成モデル
+	interface ImageModelInfo {
+		id: string;
+		name: string;
+		desc: string;
+		cost: string; // 1枚あたりの料金
+	}
+
+	const imageModels: ImageModelInfo[] = [
+		{ id: 'black-forest-labs/FLUX.1-schnell-Free', name: 'FLUX.1 schnell', desc: '高速・無料', cost: '無料' },
+		{ id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 schnell Pro', desc: '高速・高品質', cost: '$0.003' },
+		{ id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 dev', desc: '開発版', cost: '$0.025' },
+		{ id: 'black-forest-labs/FLUX.1-pro', name: 'FLUX.1 pro', desc: '最高品質', cost: '$0.05' },
+		{ id: 'black-forest-labs/FLUX.1.1-pro', name: 'FLUX 1.1 pro', desc: '最新・最高品質', cost: '$0.04' },
+	];
+
+	let selectedImageModel = 'black-forest-labs/FLUX.1-schnell-Free';
+	let showImageModelSelector = false;
+
 	function toggleReasoning(messageId: string) {
 		if (expandedReasoning.has(messageId)) {
 			expandedReasoning.delete(messageId);
@@ -192,6 +211,7 @@
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						prompt: userMessage,
+						model: selectedImageModel,
 						provider: selectedProvider
 					})
 				});
@@ -432,19 +452,36 @@
 	<div class="flex-1 flex flex-col">
 		<!-- Header -->
 		<header class="h-14 border-b border-dark-800 flex items-center px-4 gap-4">
-			<button on:click={() => sidebarOpen = !sidebarOpen} class="md:hidden text-dark-400">
+			<button on:click={() => sidebarOpen = !sidebarOpen} class="md:hidden text-dark-400" aria-label="Toggle sidebar">
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
 				</svg>
 			</button>
-			<div class="flex items-center gap-2">
+			<button on:click={newChat} class="flex items-center gap-2 hover:opacity-80 transition-opacity">
 				<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
 					<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
 					</svg>
 				</div>
-				<span class="font-semibold text-white">SatomatashikiAIchat</span>
+				<span class="font-semibold text-white hidden sm:inline">SatomatashikiAIchat</span>
+			</button>
+
+			<!-- Provider Selector in Header -->
+			<div class="flex items-center gap-1 p-1 bg-dark-800 rounded-lg">
+				<button
+					on:click={() => selectProvider('together')}
+					class="px-3 py-1 rounded-md text-sm transition-colors {selectedProvider === 'together' ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
+				>
+					Together
+				</button>
+				<button
+					on:click={() => selectProvider('openrouter')}
+					class="px-3 py-1 rounded-md text-sm transition-colors {selectedProvider === 'openrouter' ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
+				>
+					OpenRouter
+				</button>
 			</div>
+
 			<div class="flex-1"></div>
 		</header>
 
@@ -582,67 +619,7 @@
 			<div class="max-w-3xl mx-auto">
 				<!-- Options Bar -->
 				<div class="flex items-center gap-2 mb-3 flex-wrap">
-					<!-- Provider Selector -->
-					<div class="flex items-center gap-1 p-1 bg-dark-800 rounded-lg">
-						<button
-							on:click={() => selectProvider('together')}
-							class="px-3 py-1 rounded-md text-sm transition-colors {selectedProvider === 'together' ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
-						>
-							Together
-						</button>
-						<button
-							on:click={() => selectProvider('openrouter')}
-							class="px-3 py-1 rounded-md text-sm transition-colors {selectedProvider === 'openrouter' ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
-						>
-							OpenRouter
-						</button>
-					</div>
-
-					<!-- Model Selector Button -->
-					<div class="relative">
-						<button
-							on:click={() => showModelSelector = !showModelSelector}
-							class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors bg-dark-800 border-dark-700 text-dark-300 hover:bg-dark-700 hover:text-dark-200"
-						>
-							<span class="text-base">{getSelectedModel().icon}</span>
-							{getSelectedModel().name}
-							<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{getSelectedModel().contextLength}</span>
-							{#if getSelectedModel().longContext}
-								<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded">履歴参照</span>
-							{/if}
-							{#if getSelectedModel().reasoning}
-								<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
-							{/if}
-						</button>
-
-						{#if showModelSelector}
-							<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-10 p-3 min-w-[400px]">
-								<p class="text-xs text-dark-500 px-2 py-1 mb-2">モデルを選択</p>
-								<div class="space-y-1.5">
-									{#each getModels() as model}
-										<button
-											on:click={() => selectModel(model.id)}
-											class="group/model flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-dark-700 text-dark-300 hover:bg-dark-600'}"
-										>
-											<span class="text-base">{model.icon}</span>
-											<span class="flex-1 text-left">{model.name}</span>
-											<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{model.contextLength}</span>
-											{#if model.longContext}
-												<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded">履歴参照</span>
-											{/if}
-											{#if model.reasoning}
-												<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
-											{/if}
-											<span class="text-xs text-dark-200 font-medium opacity-0 group-hover/model:opacity-100 transition-opacity whitespace-nowrap">約{calcDailyConversations(model)}回/日</span>
-										</button>
-									{/each}
-								</div>
-								<p class="text-xs text-dark-500 mt-2 px-2">※ホバーで1000円/月予算の目安表示</p>
-							</div>
-						{/if}
-					</div>
-
-					<!-- Web Search Toggle -->
+					<!-- Web Search Toggle (一番左) -->
 					<button
 						on:click={() => { enableSearch = !enableSearch; if (enableSearch) enableImageGen = false; }}
 						class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableSearch ? 'bg-primary-600/20 border-primary-500/50 text-primary-400' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
@@ -658,7 +635,7 @@
 
 					<!-- Image Generation Toggle -->
 					<button
-						on:click={() => { enableImageGen = !enableImageGen; if (enableImageGen) enableSearch = false; }}
+						on:click={() => { enableImageGen = !enableImageGen; if (enableImageGen) enableSearch = false; showImageModelSelector = false; }}
 						class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableImageGen ? 'bg-pink-600/20 border-pink-500/50 text-pink-400' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
 					>
 						<span class="text-base">🎨</span>
@@ -669,6 +646,84 @@
 							</svg>
 						{/if}
 					</button>
+
+					{#if enableImageGen}
+						<!-- Image Model Selector -->
+						<div class="relative">
+							<button
+								on:click={() => showImageModelSelector = !showImageModelSelector}
+								class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors bg-dark-800 border-dark-700 text-dark-300 hover:bg-dark-700 hover:text-dark-200"
+							>
+								<span class="text-base">🖼️</span>
+								{imageModels.find(m => m.id === selectedImageModel)?.name || 'FLUX.1'}
+								<span class="px-1.5 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded">
+									{imageModels.find(m => m.id === selectedImageModel)?.cost || '無料'}
+								</span>
+							</button>
+
+							{#if showImageModelSelector}
+								<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-10 p-3 min-w-[280px]">
+									<p class="text-xs text-dark-500 px-2 py-1 mb-2">画像生成モデルを選択</p>
+									<div class="space-y-1.5">
+										{#each imageModels as model}
+											<button
+												on:click={() => { selectedImageModel = model.id; showImageModelSelector = false; }}
+												class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedImageModel === model.id ? 'bg-pink-600/20 border border-pink-500/50 text-pink-400' : 'bg-dark-700 text-dark-300 hover:bg-dark-600'}"
+											>
+												<span class="flex-1 text-left">{model.name}</span>
+												<span class="text-xs text-dark-400">{model.desc}</span>
+												<span class="px-1.5 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded">{model.cost}</span>
+											</button>
+										{/each}
+									</div>
+								</div>
+							{/if}
+						</div>
+					{:else}
+						<!-- LLM Model Selector Button -->
+						<div class="relative">
+							<button
+								on:click={() => showModelSelector = !showModelSelector}
+								class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors bg-dark-800 border-dark-700 text-dark-300 hover:bg-dark-700 hover:text-dark-200"
+							>
+								<span class="text-base">{getSelectedModel().icon}</span>
+								{getSelectedModel().name}
+								<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{getSelectedModel().contextLength}</span>
+								{#if getSelectedModel().longContext}
+									<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded">履歴参照</span>
+								{/if}
+								{#if getSelectedModel().reasoning}
+									<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
+								{/if}
+							</button>
+
+							{#if showModelSelector}
+								<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-10 p-3 min-w-[400px]">
+									<p class="text-xs text-dark-500 px-2 py-1 mb-2">モデルを選択</p>
+									<div class="space-y-1.5">
+										{#each getModels() as model}
+											<button
+												on:click={() => selectModel(model.id)}
+												class="group/model flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-dark-700 text-dark-300 hover:bg-dark-600'}"
+											>
+												<span class="text-base">{model.icon}</span>
+												<span class="flex-1 text-left">{model.name}</span>
+												<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{model.contextLength}</span>
+												{#if model.longContext}
+													<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded">履歴参照</span>
+												{/if}
+												{#if model.reasoning}
+													<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
+												{/if}
+												<span class="text-xs text-dark-200 font-medium opacity-0 group-hover/model:opacity-100 transition-opacity whitespace-nowrap">約{calcDailyConversations(model)}回/日</span>
+											</button>
+										{/each}
+									</div>
+									<p class="text-xs text-dark-500 mt-2 px-2">※ホバーで1000円/月予算の目安表示</p>
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
 
 				<!-- Input Field -->
@@ -696,11 +751,11 @@
 	</div>
 </div>
 
-<!-- Click outside to close model selector -->
-{#if showModelSelector}
+<!-- Click outside to close selectors -->
+{#if showModelSelector || showImageModelSelector}
 	<button
 		class="fixed inset-0 z-0"
-		on:click={() => showModelSelector = false}
-		aria-label="Close model selector"
+		on:click={() => { showModelSelector = false; showImageModelSelector = false; }}
+		aria-label="Close selector"
 	></button>
 {/if}
