@@ -564,7 +564,7 @@
 									{#each getModels() as model}
 										<button
 											on:click={() => selectModel(model.id)}
-											class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-dark-700 text-dark-300 hover:bg-dark-600'}"
+											class="group/model flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-dark-700 text-dark-300 hover:bg-dark-600'}"
 										>
 											<span class="text-base">{model.icon}</span>
 											<span class="flex-1 text-left">{model.name}</span>
@@ -572,11 +572,11 @@
 											{#if model.reasoning}
 												<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
 											{/if}
-											<span class="text-xs text-dark-500">約{calcDailyConversations(model)}回/日</span>
+											<span class="text-xs text-dark-500 opacity-0 group-hover/model:opacity-100 transition-opacity">約{calcDailyConversations(model)}回/日</span>
 										</button>
 									{/each}
 								</div>
-								<p class="text-xs text-dark-600 mt-2 px-2">※$5/月予算での目安</p>
+								<p class="text-xs text-dark-600 mt-2 px-2">※ホバーで$5/月予算の目安表示</p>
 							</div>
 						{/if}
 					</div>
