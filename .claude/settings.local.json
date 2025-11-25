@@ -26,7 +26,8 @@
       "WebFetch(domain:thenounproject.com)",
       "Bash(del nul)",
       "Bash(dir nul)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "WebFetch(domain:www.together.ai)"
     ],
     "deny": [],
     "ask": []

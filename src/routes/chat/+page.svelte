@@ -43,13 +43,12 @@
 	let streamingContent = '';
 	let streamingReasoning = '';
 	let selectedProvider: Provider = 'together';
-	let selectedModel = 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free';
+	let selectedModel = 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
 	let showModelSelector = false;
 	let expandedReasoning: Set<string> = new Set();
 
 	const togetherModels: ModelInfo[] = [
-		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free', name: 'Llama 3.3 70B Free', desc: '無料・推奨', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0, outputCost: 0 },
-		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B', desc: '高性能', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
+		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B', desc: '高性能・推奨', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
 		{ id: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', name: 'Llama 3.1 8B', desc: '高速・軽量', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.18, outputCost: 0.18 },
 		{ id: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', name: 'Llama 3.1 70B', desc: '高性能', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
 		{ id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', name: 'Llama 3.1 405B', desc: '最高性能', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 3.50, outputCost: 3.50 },
