@@ -24,6 +24,7 @@
 		desc: string;
 		icon: string;
 		reasoning?: boolean;
+		longContext?: boolean; // 前の会話を参照可能（長いコンテキスト）
 		contextLength: string; // コンテキスト長
 		inputCost: number; // $/1M tokens (入力)
 		outputCost: number; // $/1M tokens (出力)
@@ -45,23 +46,23 @@
 	let expandedReasoning: Set<string> = new Set();
 
 	const togetherModels: ModelInfo[] = [
-		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B', desc: '高性能・推奨', icon: '🦙', contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
-		{ id: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', name: 'Llama 3.1 8B', desc: '高速・軽量', icon: '🦙', contextLength: '128K', inputCost: 0.18, outputCost: 0.18 },
-		{ id: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', name: 'Llama 3.1 70B', desc: '高性能', icon: '🦙', contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
-		{ id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', name: 'Llama 3.1 405B', desc: '最高性能', icon: '🦙', contextLength: '128K', inputCost: 3.50, outputCost: 3.50 },
+		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B', desc: '高性能・推奨', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
+		{ id: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', name: 'Llama 3.1 8B', desc: '高速・軽量', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.18, outputCost: 0.18 },
+		{ id: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', name: 'Llama 3.1 70B', desc: '高性能', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
+		{ id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', name: 'Llama 3.1 405B', desc: '最高性能', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 3.50, outputCost: 3.50 },
 		{ id: 'mistralai/Mixtral-8x7B-Instruct-v0.1', name: 'Mixtral 8x7B', desc: 'バランス型', icon: '🌀', contextLength: '32K', inputCost: 0.60, outputCost: 0.60 },
-		{ id: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B', name: 'DeepSeek R1 70B', desc: '推論特化', icon: '🧠', reasoning: true, contextLength: '128K', inputCost: 0.75, outputCost: 0.99 },
-		{ id: 'moonshotai/Kimi-K2-Instruct', name: 'Kimi K2', desc: '推論特化', icon: '🌙', reasoning: true, contextLength: '128K', inputCost: 0.60, outputCost: 0.89 },
+		{ id: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B', name: 'DeepSeek R1 70B', desc: '推論特化', icon: '🧠', reasoning: true, longContext: true, contextLength: '128K', inputCost: 0.75, outputCost: 0.99 },
+		{ id: 'moonshotai/Kimi-K2-Instruct', name: 'Kimi K2', desc: '推論特化', icon: '🌙', reasoning: true, longContext: true, contextLength: '128K', inputCost: 0.60, outputCost: 0.89 },
 	];
 
 	const openrouterModels: ModelInfo[] = [
-		{ id: 'google/gemini-2.5-flash-preview', name: 'Gemini 2.5 Flash', desc: '高速・高性能', icon: '✨', contextLength: '1M', inputCost: 0.15, outputCost: 0.60 },
-		{ id: 'x-ai/grok-3-beta', name: 'Grok 3', desc: 'xAI最新', icon: '🚀', contextLength: '128K', inputCost: 3.00, outputCost: 15.00 },
-		{ id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', desc: 'Anthropic最新', icon: '🎭', contextLength: '200K', inputCost: 3.00, outputCost: 15.00 },
-		{ id: 'openai/gpt-4o', name: 'GPT-4o', desc: 'OpenAI', icon: '🤖', contextLength: '128K', inputCost: 2.50, outputCost: 10.00 },
-		{ id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', desc: 'Meta AI', icon: '🦙', contextLength: '128K', inputCost: 0.12, outputCost: 0.30 },
+		{ id: 'google/gemini-2.5-flash-preview', name: 'Gemini 2.5 Flash', desc: '高速・高性能', icon: '✨', longContext: true, contextLength: '1M', inputCost: 0.15, outputCost: 0.60 },
+		{ id: 'x-ai/grok-3-beta', name: 'Grok 3', desc: 'xAI最新', icon: '🚀', longContext: true, contextLength: '128K', inputCost: 3.00, outputCost: 15.00 },
+		{ id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', desc: 'Anthropic最新', icon: '🎭', longContext: true, contextLength: '200K', inputCost: 3.00, outputCost: 15.00 },
+		{ id: 'openai/gpt-4o', name: 'GPT-4o', desc: 'OpenAI', icon: '🤖', longContext: true, contextLength: '128K', inputCost: 2.50, outputCost: 10.00 },
+		{ id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', desc: 'Meta AI', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.12, outputCost: 0.30 },
 		{ id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', desc: '推論特化', icon: '🧠', reasoning: true, contextLength: '64K', inputCost: 0.55, outputCost: 2.19 },
-		{ id: 'moonshotai/kimi-k2', name: 'Kimi K2', desc: '推論特化', icon: '🌙', reasoning: true, contextLength: '128K', inputCost: 0.60, outputCost: 0.89 },
+		{ id: 'moonshotai/kimi-k2', name: 'Kimi K2', desc: '推論特化', icon: '🌙', reasoning: true, longContext: true, contextLength: '128K', inputCost: 0.60, outputCost: 0.89 },
 	];
 
 	function toggleReasoning(messageId: string) {
@@ -87,11 +88,13 @@
 		return models.find(m => m.id === selectedModel) || models[0];
 	}
 
-	// 1日あたりの会話回数を計算（$5/月予算）
+	// 1日あたりの会話回数を計算（1000円/月予算）
 	// 平均1会話あたり: 入力1000トークン + 出力500トークン と想定
 	function calcDailyConversations(model: ModelInfo): number {
-		const monthlyBudget = 5; // $5/月
-		const dailyBudget = monthlyBudget / 30;
+		const monthlyBudgetYen = 1000; // 1000円/月
+		const exchangeRate = 150; // 1ドル = 150円
+		const monthlyBudgetUsd = monthlyBudgetYen / exchangeRate; // 約$6.67
+		const dailyBudget = monthlyBudgetUsd / 30;
 		const avgInputTokens = 1000;
 		const avgOutputTokens = 500;
 		const costPerConversation = (model.inputCost * avgInputTokens / 1_000_000) + (model.outputCost * avgOutputTokens / 1_000_000);
@@ -552,13 +555,16 @@
 							<span class="text-base">{getSelectedModel().icon}</span>
 							{getSelectedModel().name}
 							<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{getSelectedModel().contextLength}</span>
+							{#if getSelectedModel().longContext}
+								<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded">履歴参照</span>
+							{/if}
 							{#if getSelectedModel().reasoning}
 								<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
 							{/if}
 						</button>
 
 						{#if showModelSelector}
-							<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-10 p-3 min-w-[340px]">
+							<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-10 p-3 min-w-[400px]">
 								<p class="text-xs text-dark-500 px-2 py-1 mb-2">モデルを選択</p>
 								<div class="space-y-1.5">
 									{#each getModels() as model}
@@ -569,14 +575,17 @@
 											<span class="text-base">{model.icon}</span>
 											<span class="flex-1 text-left">{model.name}</span>
 											<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{model.contextLength}</span>
+											{#if model.longContext}
+												<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded">履歴参照</span>
+											{/if}
 											{#if model.reasoning}
 												<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
 											{/if}
-											<span class="text-xs text-dark-500 opacity-0 group-hover/model:opacity-100 transition-opacity">約{calcDailyConversations(model)}回/日</span>
+											<span class="text-xs text-dark-200 font-medium opacity-0 group-hover/model:opacity-100 transition-opacity whitespace-nowrap">約{calcDailyConversations(model)}回/日</span>
 										</button>
 									{/each}
 								</div>
-								<p class="text-xs text-dark-600 mt-2 px-2">※ホバーで$5/月予算の目安表示</p>
+								<p class="text-xs text-dark-500 mt-2 px-2">※ホバーで1000円/月予算の目安表示</p>
 							</div>
 						{/if}
 					</div>
