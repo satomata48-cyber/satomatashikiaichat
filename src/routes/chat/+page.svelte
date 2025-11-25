@@ -8,6 +8,7 @@
 		content: string;
 		reasoning?: string;
 		sources?: { title: string; url: string; content: string }[];
+		image?: string; // 画像生成結果（base64 data URL）
 	}
 
 	interface Conversation {
@@ -36,7 +37,8 @@
 	let inputMessage = '';
 	let loading = false;
 	let loadingConversation = false;
-	let enableSearch = true;
+	let enableSearch = false;
+	let enableImageGen = false; // 画像生成モード
 	let sidebarOpen = true;
 	let streamingContent = '';
 	let streamingReasoning = '';
@@ -181,6 +183,48 @@
 			role: 'user',
 			content: userMessage
 		}];
+
+		// 画像生成モードの場合
+		if (enableImageGen) {
+			try {
+				const res = await fetch('/api/image', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						prompt: userMessage,
+						provider: selectedProvider
+					})
+				});
+
+				if (res.status === 401) {
+					goto('/login');
+					return;
+				}
+
+				if (!res.ok) {
+					const error = await res.json();
+					throw new Error(error.error || 'Image generation failed');
+				}
+
+				const data = await res.json();
+				messages = [...messages, {
+					id: crypto.randomUUID(),
+					role: 'assistant',
+					content: `画像を生成しました (${data.model})`,
+					image: data.image
+				}];
+			} catch (e) {
+				console.error('Image generation error:', e);
+				messages = [...messages, {
+					id: crypto.randomUUID(),
+					role: 'assistant',
+					content: `画像生成エラー: ${e instanceof Error ? e.message : 'Unknown error'}`
+				}];
+			} finally {
+				loading = false;
+			}
+			return;
+		}
 
 		let sources: any[] = [];
 		let fullContent = '';
@@ -461,6 +505,14 @@
 								<div class="inline-block text-left rounded-2xl px-4 py-3 {message.role === 'user' ? 'bg-primary-600 text-white' : 'bg-dark-800 text-dark-200'}">
 									<p class="whitespace-pre-wrap">{message.content}</p>
 								</div>
+								{#if message.image}
+									<div class="mt-2">
+										<img src={message.image} alt="Generated image" class="max-w-md rounded-xl border border-dark-700 shadow-lg" />
+										<a href={message.image} download="generated-image.png" class="inline-block mt-2 text-xs text-primary-400 hover:underline">
+											画像をダウンロード
+										</a>
+									</div>
+								{/if}
 								{#if message.sources && message.sources.length > 0}
 									<div class="mt-2 space-y-1">
 										<p class="text-xs text-dark-500">参考ソース:</p>
@@ -592,12 +644,26 @@
 
 					<!-- Web Search Toggle -->
 					<button
-						on:click={() => enableSearch = !enableSearch}
+						on:click={() => { enableSearch = !enableSearch; if (enableSearch) enableImageGen = false; }}
 						class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableSearch ? 'bg-primary-600/20 border-primary-500/50 text-primary-400' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
 					>
 						<span class="text-base">🔍</span>
 						Web検索
 						{#if enableSearch}
+							<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+							</svg>
+						{/if}
+					</button>
+
+					<!-- Image Generation Toggle -->
+					<button
+						on:click={() => { enableImageGen = !enableImageGen; if (enableImageGen) enableSearch = false; }}
+						class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableImageGen ? 'bg-pink-600/20 border-pink-500/50 text-pink-400' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
+					>
+						<span class="text-base">🎨</span>
+						画像生成
+						{#if enableImageGen}
 							<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
 								<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
 							</svg>
@@ -610,7 +676,7 @@
 					<textarea
 						bind:value={inputMessage}
 						on:keydown={handleKeydown}
-						placeholder="メッセージを入力..."
+						placeholder={enableImageGen ? "生成したい画像を説明..." : "メッセージを入力..."}
 						rows="1"
 						class="input-field flex-1 resize-none"
 						disabled={loading}

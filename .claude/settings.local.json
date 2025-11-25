@@ -25,7 +25,8 @@
       "WebFetch(domain:svgsilh.com)",
       "WebFetch(domain:thenounproject.com)",
       "Bash(del nul)",
-      "Bash(dir nul)"
+      "Bash(dir nul)",
+      "Bash(git config:*)"
     ],
     "deny": [],
     "ask": []
