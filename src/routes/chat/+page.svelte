@@ -1,6 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { marked } from 'marked';
+
+	// マークダウンの設定
+	marked.setOptions({
+		breaks: true, // 改行を<br>に変換
+		gfm: true // GitHub Flavored Markdown
+	});
+
+	// マークダウンをHTMLに変換
+	function renderMarkdown(text: string): string {
+		return marked.parse(text) as string;
+	}
 
 	interface Message {
 		id: string;
@@ -804,7 +816,13 @@
 									</div>
 								{/if}
 								<div class="inline-block text-left rounded-2xl px-4 py-3 max-w-full {message.role === 'user' ? 'bg-primary-600 text-white' : 'bg-dark-800 text-dark-200'}">
-									<p class="whitespace-pre-wrap break-words overflow-wrap-anywhere">{message.content}</p>
+									{#if message.role === 'assistant'}
+										<div class="prose prose-invert prose-sm max-w-none break-words overflow-wrap-anywhere">
+											{@html renderMarkdown(message.content)}
+										</div>
+									{:else}
+										<p class="whitespace-pre-wrap break-words overflow-wrap-anywhere">{message.content}</p>
+									{/if}
 								</div>
 								{#if message.image}
 									<div class="mt-2">
@@ -849,7 +867,9 @@
 								{/if}
 								{#if streamingContent}
 									<div class="inline-block text-left rounded-2xl px-4 py-3 bg-dark-800 text-dark-200 max-w-full">
-										<p class="whitespace-pre-wrap break-words">{streamingContent}<span class="animate-pulse">▌</span></p>
+										<div class="prose prose-invert prose-sm max-w-none break-words overflow-wrap-anywhere">
+											{@html renderMarkdown(streamingContent)}<span class="animate-pulse">▌</span>
+										</div>
 									</div>
 								{/if}
 							</div>

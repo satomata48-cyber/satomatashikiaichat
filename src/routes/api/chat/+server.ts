@@ -135,7 +135,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 							chatId,
 							'assistant',
 							fullResponse,
-							searchResults ? JSON.stringify(searchResults) : undefined
+							searchResults ? JSON.stringify(searchResults) : undefined,
+							fullReasoning || undefined
 						);
 					}
 
