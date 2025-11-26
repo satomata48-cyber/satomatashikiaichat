@@ -202,6 +202,8 @@ export async function* parseSSEStreamWithReasoningGenerator(stream: ReadableStre
 	const reader = stream.getReader();
 	const decoder = new TextDecoder();
 	let buffer = '';
+	let inThinkTag = false; // Track if we're inside <think> tags
+	let thinkBuffer = ''; // Buffer for think content
 
 	try {
 		while (true) {
@@ -232,10 +234,61 @@ export async function* parseSSEStreamWithReasoningGenerator(stream: ReadableStre
 								yield { type: 'reasoning', text: reasoning };
 							}
 
-							// Regular content
-							const content = delta?.content;
+							// Regular content - parse <think> tags
+							let content = delta?.content;
 							if (content) {
-								yield { type: 'content', text: content };
+								// Process content for <think> tags
+								let processedContent = '';
+								let i = 0;
+
+								while (i < content.length) {
+									if (!inThinkTag) {
+										// Look for <think> opening tag
+										const thinkStart = content.indexOf('<think>', i);
+										if (thinkStart !== -1 && thinkStart === i) {
+											inThinkTag = true;
+											i += 7; // Skip past <think>
+										} else if (thinkStart !== -1) {
+											// Output content before <think>
+											processedContent += content.substring(i, thinkStart);
+											inThinkTag = true;
+											i = thinkStart + 7;
+										} else {
+											// No <think> tag, output rest of content
+											processedContent += content.substring(i);
+											break;
+										}
+									} else {
+										// Inside think tag, look for </think>
+										const thinkEnd = content.indexOf('</think>', i);
+										if (thinkEnd !== -1) {
+											// Found closing tag
+											const thinkContent = content.substring(i, thinkEnd);
+											thinkBuffer += thinkContent;
+											if (thinkBuffer) {
+												yield { type: 'reasoning', text: thinkBuffer };
+												thinkBuffer = '';
+											}
+											inThinkTag = false;
+											i = thinkEnd + 9; // Skip past </think>
+										} else {
+											// No closing tag yet, buffer the content
+											thinkBuffer += content.substring(i);
+											break;
+										}
+									}
+								}
+
+								// Yield buffered think content periodically
+								if (inThinkTag && thinkBuffer.length > 0) {
+									yield { type: 'reasoning', text: thinkBuffer };
+									thinkBuffer = '';
+								}
+
+								// Yield processed content
+								if (processedContent) {
+									yield { type: 'content', text: processedContent };
+								}
 							}
 						} catch {
 							// Skip invalid JSON
