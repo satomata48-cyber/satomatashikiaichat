@@ -11,6 +11,11 @@ binding = "DB"
 database_name = "satomatashiki-ai-chat-db"
 database_id = "19f3b9fe-71c7-42cb-9644-97a2e9d8f693"
 
+# R2 Storage binding for images
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "satomatashiki-ai-images"
+
 # Environment variables (本番環境用)
 [vars]
 ENVIRONMENT = "production"

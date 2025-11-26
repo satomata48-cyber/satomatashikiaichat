@@ -27,7 +27,10 @@
       "Bash(del nul)",
       "Bash(dir nul)",
       "Bash(git config:*)",
-      "WebFetch(domain:www.together.ai)"
+      "WebFetch(domain:www.together.ai)",
+      "WebFetch(domain:openrouter.ai)",
+      "WebFetch(domain:api.together.ai)",
+      "WebFetch(domain:novita.ai)"
     ],
     "deny": [],
     "ask": []

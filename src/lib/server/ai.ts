@@ -42,16 +42,21 @@ export async function searchWeb(query: string, apiKey: string): Promise<SearchRe
 	}
 }
 
-function buildSystemMessage(searchResults?: SearchResult[]): string {
+function buildSystemMessage(searchResults?: SearchResult[], customSystemPrompt?: string): string {
+	// カスタムシステムプロンプト（テンプレート）がある場合
+	const basePrompt = customSystemPrompt || 'あなたは親切で知識豊富なAIアシスタントです。日本語で丁寧に回答してください。';
+
 	if (searchResults && searchResults.length > 0) {
-		return `あなたは親切で知識豊富なAIアシスタントです。以下の検索結果を参考にして回答してください。
+		return `${basePrompt}
+
+以下の検索結果を参考にして回答してください。
 
 重要：回答にはURLやソースへの参照を含めないでください。ソースは別途システムが表示します。本文のみを回答してください。
 
 検索結果:
 ${searchResults.map((r, i) => `[${i + 1}] ${r.title}\n${r.content}`).join('\n\n')}`;
 	}
-	return 'あなたは親切で知識豊富なAIアシスタントです。日本語で丁寧に回答してください。';
+	return basePrompt;
 }
 
 // Together AI Chat
@@ -59,10 +64,11 @@ export async function chatWithTogetherAI(
 	messages: ChatMessage[],
 	apiKey: string,
 	model: string = 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
-	searchResults?: SearchResult[]
+	searchResults?: SearchResult[],
+	systemPrompt?: string
 ): Promise<ReadableStream<Uint8Array>> {
 	const fullMessages: ChatMessage[] = [
-		{ role: 'system', content: buildSystemMessage(searchResults) },
+		{ role: 'system', content: buildSystemMessage(searchResults, systemPrompt) },
 		...messages
 	];
 
@@ -94,10 +100,11 @@ export async function chatWithOpenRouter(
 	messages: ChatMessage[],
 	apiKey: string,
 	model: string = 'google/gemini-2.5-flash-preview',
-	searchResults?: SearchResult[]
+	searchResults?: SearchResult[],
+	systemPrompt?: string
 ): Promise<ReadableStream<Uint8Array>> {
 	const fullMessages: ChatMessage[] = [
-		{ role: 'system', content: buildSystemMessage(searchResults) },
+		{ role: 'system', content: buildSystemMessage(searchResults, systemPrompt) },
 		...messages
 	];
 
@@ -132,12 +139,13 @@ export async function chatWithAI(
 	provider: 'together' | 'openrouter',
 	apiKey: string,
 	model: string,
-	searchResults?: SearchResult[]
+	searchResults?: SearchResult[],
+	systemPrompt?: string
 ): Promise<ReadableStream<Uint8Array>> {
 	if (provider === 'openrouter') {
-		return chatWithOpenRouter(messages, apiKey, model, searchResults);
+		return chatWithOpenRouter(messages, apiKey, model, searchResults, systemPrompt);
 	}
-	return chatWithTogetherAI(messages, apiKey, model, searchResults);
+	return chatWithTogetherAI(messages, apiKey, model, searchResults, systemPrompt);
 }
 
 // Chunk type for streaming with reasoning support

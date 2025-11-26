@@ -178,3 +178,144 @@ export async function getChatWithMessages(
 		messages: (messagesResult.results as Message[]) || []
 	};
 }
+
+// Usage history operations
+export interface UsageHistory {
+	id: string;
+	user_id: string;
+	date: string;
+	message_count: number;
+	image_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+// 使用履歴を記録（UPSERT: 同じ日付なら更新、なければ挿入）
+export async function recordUsage(
+	db: D1Database,
+	userId: string,
+	type: 'message' | 'image'
+): Promise<void> {
+	const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+	const id = crypto.randomUUID();
+
+	if (type === 'message') {
+		await db
+			.prepare(`
+				INSERT INTO usage_history (id, user_id, date, message_count, image_count)
+				VALUES (?, ?, ?, 1, 0)
+				ON CONFLICT(user_id, date) DO UPDATE SET
+					message_count = message_count + 1,
+					updated_at = CURRENT_TIMESTAMP
+			`)
+			.bind(id, userId, today)
+			.run();
+	} else {
+		await db
+			.prepare(`
+				INSERT INTO usage_history (id, user_id, date, message_count, image_count)
+				VALUES (?, ?, ?, 0, 1)
+				ON CONFLICT(user_id, date) DO UPDATE SET
+					image_count = image_count + 1,
+					updated_at = CURRENT_TIMESTAMP
+			`)
+			.bind(id, userId, today)
+			.run();
+	}
+}
+
+// 月別の使用履歴を取得
+export async function getUsageHistory(
+	db: D1Database,
+	userId: string,
+	year: number,
+	month: number
+): Promise<{ date: string; count: number }[]> {
+	const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+	const endDate = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`;
+
+	const result = await db
+		.prepare(`
+			SELECT date, (message_count + image_count) as count
+			FROM usage_history
+			WHERE user_id = ? AND date >= ? AND date <= ?
+			ORDER BY date ASC
+		`)
+		.bind(userId, startDate, endDate)
+		.all<{ date: string; count: number }>();
+
+	return result.results || [];
+}
+
+// Prompt Template operations
+export interface PromptTemplate {
+	id: string;
+	user_id: string;
+	name: string;
+	content: string;
+	is_default: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export async function getPromptTemplates(
+	db: D1Database,
+	userId: string
+): Promise<PromptTemplate[]> {
+	const result = await db
+		.prepare('SELECT * FROM prompt_templates WHERE user_id = ? ORDER BY created_at ASC')
+		.bind(userId)
+		.all<PromptTemplate>();
+	return result.results || [];
+}
+
+export async function getPromptTemplateById(
+	db: D1Database,
+	id: string,
+	userId: string
+): Promise<PromptTemplate | null> {
+	const result = await db
+		.prepare('SELECT * FROM prompt_templates WHERE id = ? AND user_id = ?')
+		.bind(id, userId)
+		.first<PromptTemplate>();
+	return result || null;
+}
+
+export async function createPromptTemplate(
+	db: D1Database,
+	userId: string,
+	name: string,
+	content: string
+): Promise<PromptTemplate> {
+	const id = crypto.randomUUID();
+	const now = new Date().toISOString();
+	await db
+		.prepare('INSERT INTO prompt_templates (id, user_id, name, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+		.bind(id, userId, name, content, now, now)
+		.run();
+	return { id, user_id: userId, name, content, is_default: 0, created_at: now, updated_at: now };
+}
+
+export async function updatePromptTemplate(
+	db: D1Database,
+	id: string,
+	userId: string,
+	name: string,
+	content: string
+): Promise<void> {
+	await db
+		.prepare('UPDATE prompt_templates SET name = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?')
+		.bind(name, content, id, userId)
+		.run();
+}
+
+export async function deletePromptTemplate(
+	db: D1Database,
+	id: string,
+	userId: string
+): Promise<void> {
+	await db
+		.prepare('DELETE FROM prompt_templates WHERE id = ? AND user_id = ?')
+		.bind(id, userId)
+		.run();
+}

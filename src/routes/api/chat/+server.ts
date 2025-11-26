@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { searchWeb, chatWithAI, parseSSEStreamGenerator, parseSSEStreamWithReasoningGenerator, isReasoningModel } from '$lib/server/ai';
-import { createMessage, getMessagesByChat, createChat, getChatById } from '$lib/server/db';
+import { createMessage, getMessagesByChat, createChat, getChatById, recordUsage } from '$lib/server/db';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (!locals.user) {
@@ -22,7 +22,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const openrouterApiKey = env.OPENROUTER_API_KEY;
 	const tavilyApiKey = env.TAVILY_API_KEY;
 
-	const { message, conversationId, enableSearch, model, provider = 'together' } = await request.json();
+	const { message, conversationId, enableSearch, model, provider = 'together', systemPrompt } = await request.json();
 
 	// Get the correct API key based on provider
 	const apiKey = provider === 'openrouter' ? openrouterApiKey : togetherApiKey;
@@ -62,6 +62,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	// Save user message
 	await createMessage(platform.env.DB, chatId, 'user', message);
 
+	// Record usage history
+	await recordUsage(platform.env.DB, locals.user.id, 'message');
+
 	// Get chat history
 	const messages = await getMessagesByChat(platform.env.DB, chatId);
 	const chatHistory = messages.map(m => ({
@@ -79,7 +82,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		// Get AI response stream
 		let aiStream;
 		try {
-			aiStream = await chatWithAI(chatHistory, provider, apiKey, model, searchResults);
+			aiStream = await chatWithAI(chatHistory, provider, apiKey, model, searchResults, systemPrompt);
 		} catch (aiError) {
 			console.error('AI API error:', aiError);
 			return new Response(JSON.stringify({ error: `AI API error: ${aiError instanceof Error ? aiError.message : 'Unknown error'}` }), {

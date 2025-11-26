@@ -7,6 +7,11 @@
 		@apply scroll-smooth;
 	}
 
+	html, body {
+		@apply overflow-x-hidden;
+		-webkit-overflow-scrolling: touch;
+	}
+
 	body {
 		@apply antialiased;
 	}
@@ -69,6 +74,12 @@
 }
 
 @layer utilities {
+	/* テキスト折り返し */
+	.overflow-wrap-anywhere {
+		overflow-wrap: anywhere;
+		word-break: break-word;
+	}
+
 	/* アニメーション */
 	.animate-fade-in {
 		animation: fadeIn 0.3s ease-out;
