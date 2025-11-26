@@ -52,7 +52,11 @@
 		// 高速チャット（まぁまぁ賢い）
 		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B', desc: '高速・賢い', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
 		{ id: 'Qwen/Qwen3-235B-A22B-fp8-tput', name: 'Qwen3 235B', desc: '高速・高性能', icon: '🔮', longContext: true, contextLength: '128K', inputCost: 0.20, outputCost: 0.60 },
-		// 推論特化
+		// 推論特化（コスパ良）
+		{ id: 'Qwen/Qwen3-Next-80B-A3B-Thinking', name: 'Qwen3 80B Think', desc: '推論・格安', icon: '💭', reasoning: true, longContext: true, contextLength: '128K', inputCost: 0.15, outputCost: 1.50 },
+		{ id: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B', name: 'R1 Distill 70B', desc: '推論・蒸留', icon: '🔬', reasoning: true, longContext: true, contextLength: '128K', inputCost: 2.00, outputCost: 2.00 },
+		{ id: 'Qwen/QwQ-32B', name: 'QwQ-32B', desc: '推論', icon: '🤔', reasoning: true, longContext: true, contextLength: '128K', inputCost: 1.20, outputCost: 1.20 },
+		// 推論特化（高性能）
 		{ id: 'moonshotai/Kimi-K2-Instruct', name: 'Kimi K2', desc: '推論', icon: '🌙', reasoning: true, longContext: true, contextLength: '128K', inputCost: 1.20, outputCost: 4.00 },
 		{ id: 'deepseek-ai/DeepSeek-R1-0528', name: 'DeepSeek R1', desc: '推論', icon: '🧠', reasoning: true, longContext: true, contextLength: '128K', inputCost: 3.00, outputCost: 7.00 },
 	];
