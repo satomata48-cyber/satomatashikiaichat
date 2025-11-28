@@ -21,6 +21,7 @@
 		reasoning?: string;
 		sources?: { title: string; url: string; content: string }[];
 		image?: string; // 画像生成結果（base64 data URL）
+		model?: string; // 使用したLLMモデル
 	}
 
 	interface Conversation {
@@ -51,31 +52,31 @@
 	let loading = false;
 	let loadingConversation = false;
 	let enableSearch = false;
+	let searchResultCount: 5 | 10 = 5; // 検索結果の件数
 	let enableImageGen = false; // 画像生成モード
+	let enableDateTime = false; // 日時情報を追加
 	let sidebarOpen = false; // スマホではデフォルトで閉じる
 	let streamingContent = '';
 	let streamingReasoning = '';
 	let selectedProvider: Provider = 'together';
-	let selectedModel = 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
+	let selectedModel = 'deepseek-ai/DeepSeek-V3.1';
 	let showModelSelector = false;
 	let expandedReasoning: Set<string> = new Set();
 
 	const togetherModels: ModelInfo[] = [
 		// 高速チャット
-		{ id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama 3.3 70B', desc: '高速・賢い', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.88, outputCost: 0.88 },
+		{ id: 'deepseek-ai/DeepSeek-V3.1', name: 'DeepSeek V3.1', desc: '高性能', icon: '🌊', longContext: true, contextLength: '128K', inputCost: 1.25, outputCost: 1.25 },
 		// 推論特化
-		{ id: 'moonshotai/Kimi-K2-Instruct', name: 'Kimi K2', desc: '推論', icon: '🌙', reasoning: true, longContext: true, contextLength: '128K', inputCost: 1.20, outputCost: 4.00 },
-		{ id: 'deepseek-ai/DeepSeek-R1-0528-tput', name: 'DeepSeek R1', desc: '推論・格安', icon: '🧠', reasoning: true, longContext: true, contextLength: '128K', inputCost: 0.55, outputCost: 2.19 },
+		{ id: 'moonshotai/Kimi-K2-Thinking', name: 'Kimi K2 Thinking', desc: '推論', icon: '🌙', reasoning: true, longContext: true, contextLength: '256K', inputCost: 1.20, outputCost: 4.00 },
+		{ id: 'deepseek-ai/DeepSeek-R1-0528-tput', name: 'DeepSeek R1', desc: '推論', icon: '🐋', reasoning: true, longContext: true, contextLength: '128K', inputCost: 3.00, outputCost: 7.00 },
+		{ id: 'Qwen/Qwen3-Next-80B-A3B-Thinking', name: 'Qwen3 80B Think', desc: '推論・格安', icon: '🔮', reasoning: true, longContext: true, contextLength: '128K', inputCost: 0.15, outputCost: 1.50 },
 	];
 
 	const openrouterModels: ModelInfo[] = [
-		{ id: 'google/gemini-2.5-flash-preview', name: 'Gemini 2.5 Flash', desc: '高速・高性能', icon: '✨', longContext: true, contextLength: '1M', inputCost: 0.15, outputCost: 0.60 },
-		{ id: 'x-ai/grok-3-beta', name: 'Grok 3', desc: 'xAI最新', icon: '🚀', longContext: true, contextLength: '128K', inputCost: 3.00, outputCost: 15.00 },
-		{ id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', desc: 'Anthropic最新', icon: '🎭', longContext: true, contextLength: '200K', inputCost: 3.00, outputCost: 15.00 },
-		{ id: 'openai/gpt-4o', name: 'GPT-4o', desc: 'OpenAI', icon: '🤖', longContext: true, contextLength: '128K', inputCost: 2.50, outputCost: 10.00 },
-		{ id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', desc: 'Meta AI', icon: '🦙', longContext: true, contextLength: '128K', inputCost: 0.12, outputCost: 0.30 },
-		{ id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', desc: '推論特化', icon: '🧠', reasoning: true, contextLength: '64K', inputCost: 0.55, outputCost: 2.19 },
-		{ id: 'moonshotai/kimi-k2', name: 'Kimi K2', desc: '推論特化', icon: '🌙', reasoning: true, longContext: true, contextLength: '128K', inputCost: 0.60, outputCost: 0.89 },
+		{ id: 'deepseek/deepseek-v3.2-exp', name: 'DeepSeek V3.2', desc: '高性能・格安', icon: '🌊', longContext: true, contextLength: '164K', inputCost: 0.216, outputCost: 0.328 },
+		{ id: 'moonshotai/kimi-k2-thinking', name: 'Kimi K2', desc: '推論', icon: '🌙', reasoning: true, longContext: true, contextLength: '256K', inputCost: 0.45, outputCost: 2.35 },
+		{ id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', desc: '推論', icon: '🐋', reasoning: true, longContext: true, contextLength: '164K', inputCost: 0.30, outputCost: 1.20 },
+		{ id: 'qwen/qwen3-next-80b-a3b-thinking', name: 'Qwen3 80B Think', desc: '推論・格安', icon: '🔮', reasoning: true, longContext: true, contextLength: '262K', inputCost: 0.12, outputCost: 1.20 },
 	];
 
 	// 画像生成モデル
@@ -142,6 +143,18 @@
 	function getSelectedModel(): ModelInfo {
 		const models = getModels();
 		return models.find(m => m.id === selectedModel) || models[0];
+	}
+
+	// モデルIDから表示情報を取得
+	function getModelDisplayInfo(modelId: string): { name: string; icon: string } | null {
+		const allModels = [...togetherModels, ...openrouterModels];
+		const model = allModels.find(m => m.id === modelId);
+		if (model) {
+			return { name: model.name, icon: model.icon };
+		}
+		// 知らないモデルの場合はモデルIDの最後の部分を表示
+		const parts = modelId.split('/');
+		return { name: parts[parts.length - 1], icon: '🤖' };
 	}
 
 	// 1日あたりの会話回数を計算（1000円/月予算）
@@ -371,8 +384,10 @@
 					id: m.id,
 					role: m.role,
 					content: content || '画像を生成しました',
+					reasoning: m.reasoning || undefined,
 					image: imageUrl,
-					sources: m.sources ? JSON.parse(m.sources) : undefined
+					sources: m.sources ? JSON.parse(m.sources) : undefined,
+					model: m.model || undefined
 				};
 			});
 		} catch (e) {
@@ -469,6 +484,20 @@
 		let fullReasoning = '';
 
 		try {
+			// 日本時間を取得
+			const getJapanDateTime = () => {
+				const now = new Date();
+				const japanTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+				const year = japanTime.getFullYear();
+				const month = String(japanTime.getMonth() + 1).padStart(2, '0');
+				const day = String(japanTime.getDate()).padStart(2, '0');
+				const hours = String(japanTime.getHours()).padStart(2, '0');
+				const minutes = String(japanTime.getMinutes()).padStart(2, '0');
+				const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+				const weekday = weekdays[japanTime.getDay()];
+				return `${year}年${month}月${day}日(${weekday}) ${hours}:${minutes}`;
+			};
+
 			const res = await fetch('/api/chat', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -476,9 +505,11 @@
 					message: userMessage,
 					conversationId: currentConversationId,
 					enableSearch,
+					searchResultCount: enableSearch ? searchResultCount : undefined,
 					model: selectedModel,
 					provider: selectedProvider,
-					systemPrompt: getSelectedTemplate()?.content || null
+					systemPrompt: getSelectedTemplate()?.content || null,
+					dateTime: enableDateTime ? getJapanDateTime() : undefined
 				})
 			});
 
@@ -546,7 +577,8 @@
 									role: 'assistant',
 									content: fullContent || 'エラー: 応答がありませんでした',
 									reasoning: fullReasoning || undefined,
-									sources: sources.length > 0 ? sources : undefined
+									sources: sources.length > 0 ? sources : undefined,
+									model: selectedModel
 								}];
 								// Auto expand reasoning if exists
 								if (fullReasoning) {
@@ -575,7 +607,8 @@
 					role: 'assistant',
 					content: fullContent,
 					reasoning: fullReasoning || undefined,
-					sources: sources.length > 0 ? sources : undefined
+					sources: sources.length > 0 ? sources : undefined,
+					model: selectedModel
 				}];
 				if (fullReasoning) {
 					expandedReasoning.add(newMessageId);
@@ -642,7 +675,7 @@
 	}
 </script>
 
-<div class="h-screen flex bg-dark-950 overflow-hidden">
+<div class="h-screen flex bg-dark-950 overflow-hidden" style="height: 100vh; height: 100dvh;">
 	<!-- Mobile Sidebar Overlay -->
 	{#if sidebarOpen}
 		<button
@@ -705,9 +738,9 @@
 	</div>
 
 	<!-- Main Content -->
-	<div class="flex-1 flex flex-col">
+	<div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 		<!-- Header -->
-		<header class="h-14 border-b border-dark-800 flex items-center px-4 gap-4">
+		<header class="h-14 flex-shrink-0 border-b border-dark-800 flex items-center px-4 gap-4 overflow-hidden">
 			<button on:click={() => sidebarOpen = !sidebarOpen} class="md:hidden text-dark-400" aria-label="Toggle sidebar">
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -762,7 +795,7 @@
 		</header>
 
 		<!-- Messages -->
-		<div class="flex-1 overflow-y-auto overflow-x-hidden p-4">
+		<div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); -webkit-overflow-scrolling: touch;">
 			{#if loadingConversation}
 				<div class="h-full flex flex-col items-center justify-center text-center">
 					<div class="w-12 h-12 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mb-4"></div>
@@ -781,7 +814,7 @@
 					</p>
 				</div>
 			{:else}
-				<div class="max-w-3xl mx-auto space-y-6 overflow-hidden">
+				<div class="max-w-3xl mx-auto space-y-6 overflow-hidden w-full">
 					{#each messages as message}
 						<div class="flex gap-4 {message.role === 'user' ? 'flex-row-reverse' : ''}">
 							<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center {message.role === 'user' ? 'bg-primary-600' : 'bg-dark-700'}">
@@ -802,7 +835,7 @@
 											on:click={() => toggleReasoning(message.id)}
 											class="flex items-center gap-2 text-xs text-dark-400 hover:text-dark-300 transition-colors"
 										>
-											<span class="text-base">🧠</span>
+											<span class="text-base">📘</span>
 											思考過程
 											<svg class="w-3 h-3 transition-transform {expandedReasoning.has(message.id) ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -815,13 +848,13 @@
 										{/if}
 									</div>
 								{/if}
-								<div class="inline-block text-left rounded-2xl px-4 py-3 max-w-full {message.role === 'user' ? 'bg-primary-600 text-white' : 'bg-dark-800 text-dark-200'}">
+								<div class="inline-block text-left rounded-2xl px-4 py-3 max-w-full overflow-hidden {message.role === 'user' ? 'bg-primary-600 text-white' : 'bg-dark-800 text-dark-200'}">
 									{#if message.role === 'assistant'}
-										<div class="prose prose-invert prose-sm max-w-none break-words overflow-wrap-anywhere">
+										<div class="prose prose-invert prose-sm max-w-none break-words overflow-wrap-anywhere overflow-x-hidden">
 											{@html renderMarkdown(message.content)}
 										</div>
 									{:else}
-										<p class="whitespace-pre-wrap break-words overflow-wrap-anywhere">{message.content}</p>
+										<p class="whitespace-pre-wrap break-words overflow-wrap-anywhere overflow-x-hidden">{message.content}</p>
 									{/if}
 								</div>
 								{#if message.image}
@@ -842,6 +875,13 @@
 										{/each}
 									</div>
 								{/if}
+								{#if message.role === 'assistant' && message.model}
+									{@const modelInfo = getModelDisplayInfo(message.model)}
+									<div class="mt-2 flex items-center gap-1 text-xs text-dark-500">
+										<span>{modelInfo?.icon}</span>
+										<span>{modelInfo?.name}</span>
+									</div>
+								{/if}
 							</div>
 						</div>
 					{/each}
@@ -857,7 +897,7 @@
 								{#if streamingReasoning}
 									<div class="mb-2">
 										<div class="flex items-center gap-2 text-xs text-dark-400 mb-2">
-											<span class="text-base">🧠</span>
+											<span class="text-base">📘</span>
 											思考中...
 										</div>
 										<div class="p-3 bg-dark-900 border border-dark-700 rounded-xl text-xs text-dark-400 whitespace-pre-wrap max-h-64 overflow-y-auto break-words">
@@ -870,6 +910,11 @@
 										<div class="prose prose-invert prose-sm max-w-none break-words overflow-wrap-anywhere">
 											{@html renderMarkdown(streamingContent)}<span class="animate-pulse">▌</span>
 										</div>
+									</div>
+									{@const modelInfo = getModelDisplayInfo(selectedModel)}
+									<div class="mt-2 flex items-center gap-1 text-xs text-dark-500">
+										<span>{modelInfo?.icon}</span>
+										<span>{modelInfo?.name}</span>
 									</div>
 								{/if}
 							</div>
@@ -899,8 +944,8 @@
 		</div>
 
 		<!-- Input -->
-		<div class="border-t border-dark-800 p-4">
-			<div class="max-w-3xl mx-auto">
+		<div class="flex-shrink-0 border-t border-dark-800 p-4 overflow-visible" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+			<div class="max-w-3xl mx-auto w-full">
 				<!-- Image Warning -->
 				{#if imageWarning}
 					<div class="mb-3 p-3 bg-yellow-600/20 border border-yellow-500/50 rounded-lg flex items-center justify-between">
@@ -919,13 +964,45 @@
 				<!-- Options Bar -->
 				<div class="flex items-center gap-2 mb-3 flex-wrap">
 					<!-- Web Search Toggle (一番左) -->
-					<button
-						on:click={() => { enableSearch = !enableSearch; if (enableSearch) enableImageGen = false; }}
-						class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableSearch ? 'bg-primary-600/20 border-primary-500/50 text-primary-400' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
-					>
-						<span class="text-base">🔍</span>
-						Web検索
+					<div class="flex items-center">
+						<button
+							on:click={() => { enableSearch = !enableSearch; if (enableSearch) enableImageGen = false; }}
+							class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableSearch ? 'bg-primary-600/20 border-primary-500/50 text-primary-400 rounded-r-none border-r-0' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
+						>
+							<span class="text-base">🔍</span>
+							Web検索
+							{#if enableSearch}
+								<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+									<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+								</svg>
+							{/if}
+						</button>
 						{#if enableSearch}
+							<div class="flex">
+								<button
+									on:click={() => searchResultCount = 5}
+									class="px-2 py-1.5 border border-primary-500/50 text-sm transition-colors {searchResultCount === 5 ? 'bg-primary-600 text-white' : 'bg-primary-600/20 text-primary-400 hover:bg-primary-600/30'}"
+								>
+									5件
+								</button>
+								<button
+									on:click={() => searchResultCount = 10}
+									class="px-2 py-1.5 rounded-r-lg border border-l-0 border-primary-500/50 text-sm transition-colors {searchResultCount === 10 ? 'bg-primary-600 text-white' : 'bg-primary-600/20 text-primary-400 hover:bg-primary-600/30'}"
+								>
+									10件
+								</button>
+							</div>
+						{/if}
+					</div>
+
+					<!-- DateTime Toggle -->
+					<button
+						on:click={() => enableDateTime = !enableDateTime}
+						class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableDateTime ? 'bg-amber-600/20 border-amber-500/50 text-amber-400' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
+					>
+						<span class="text-base">🕐</span>
+						日時
+						{#if enableDateTime}
 							<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
 								<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
 							</svg>
@@ -1050,8 +1127,8 @@
 							</button>
 
 							{#if showModelSelector}
-								<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-10 p-3 min-w-[400px]">
-									<p class="text-xs text-dark-500 px-2 py-1 mb-2">モデルを選択</p>
+								<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-50 p-3 min-w-[480px]">
+									<p class="text-xs text-dark-500 px-2 py-1 mb-2">モデルを選択（料金: $/1Mトークン）</p>
 									<div class="space-y-1.5">
 										{#each getModels() as model}
 											<button
@@ -1061,17 +1138,15 @@
 												<span class="text-base">{model.icon}</span>
 												<span class="flex-1 text-left">{model.name}</span>
 												<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{model.contextLength}</span>
-												{#if model.longContext}
-													<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded">履歴参照</span>
-												{/if}
 												{#if model.reasoning}
 													<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
 												{/if}
-												<span class="text-xs text-dark-200 font-medium opacity-0 group-hover/model:opacity-100 transition-opacity whitespace-nowrap">{calcDailyConversations(model)}</span>
+												<span class="px-1.5 py-0.5 text-xs bg-amber-600/30 text-amber-400 rounded whitespace-nowrap">${model.inputCost}/${model.outputCost}</span>
+												<span class="text-xs text-dark-400 font-medium whitespace-nowrap">{calcDailyConversations(model)}</span>
 											</button>
 										{/each}
 									</div>
-									<p class="text-xs text-dark-500 mt-2 px-2">※ホバーで1000円/月予算の目安表示</p>
+									<p class="text-xs text-dark-500 mt-2 px-2">※料金は入力/出力、回数は1000円/月の目安</p>
 								</div>
 							{/if}
 						</div>

@@ -10,7 +10,7 @@ export interface SearchResult {
 }
 
 // Tavily Search
-export async function searchWeb(query: string, apiKey: string): Promise<SearchResult[]> {
+export async function searchWeb(query: string, apiKey: string, maxResults: number = 5): Promise<SearchResult[]> {
 	try {
 		const response = await fetch('https://api.tavily.com/search', {
 			method: 'POST',
@@ -21,7 +21,7 @@ export async function searchWeb(query: string, apiKey: string): Promise<SearchRe
 				api_key: apiKey,
 				query,
 				search_depth: 'basic',
-				max_results: 5
+				max_results: maxResults
 			})
 		});
 
@@ -307,9 +307,13 @@ export function isReasoningModel(model: string): boolean {
 	const reasoningModels = [
 		'deepseek-ai/DeepSeek-R1',
 		'deepseek-ai/DeepSeek-R1-Distill-Llama-70B',
+		'deepseek-ai/DeepSeek-R1-0528-tput',
 		'deepseek/deepseek-r1',
-		'moonshotai/kimi-k2',
-		'moonshotai/Kimi-K2-Instruct',
+		'moonshotai/kimi-k2-thinking',
+		'moonshotai/Kimi-K2-Thinking',
+		'Qwen/Qwen3-Next-80B-A3B-Thinking',
+		'qwen/qwen3-next-80b-a3b-thinking',
+		'qwen/qwq-32b',
 	];
 	return reasoningModels.some(m => model.toLowerCase().includes(m.toLowerCase().split('/').pop() || ''));
 }

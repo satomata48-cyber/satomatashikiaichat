@@ -22,7 +22,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const openrouterApiKey = env.OPENROUTER_API_KEY;
 	const tavilyApiKey = env.TAVILY_API_KEY;
 
-	const { message, conversationId, enableSearch, model, provider = 'together', systemPrompt } = await request.json();
+	const { message, conversationId, enableSearch, searchResultCount = 5, model, provider = 'together', systemPrompt, dateTime } = await request.json();
 
 	// Get the correct API key based on provider
 	const apiKey = provider === 'openrouter' ? openrouterApiKey : togetherApiKey;
@@ -75,14 +75,22 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	// Search if enabled
 	let searchResults = undefined;
 	if (enableSearch && tavilyApiKey) {
-		searchResults = await searchWeb(message, tavilyApiKey);
+		searchResults = await searchWeb(message, tavilyApiKey, searchResultCount);
 	}
 
 	try {
 		// Get AI response stream
 		let aiStream;
 		try {
-			aiStream = await chatWithAI(chatHistory, provider, apiKey, model, searchResults, systemPrompt);
+			// 日時情報をシステムプロンプトに追加
+		let finalSystemPrompt = systemPrompt || '';
+		if (dateTime) {
+			const dateTimeInfo = `現在の日時（日本時間）: ${dateTime}`;
+			finalSystemPrompt = finalSystemPrompt
+				? `${dateTimeInfo}\n\n${finalSystemPrompt}`
+				: dateTimeInfo;
+		}
+		aiStream = await chatWithAI(chatHistory, provider, apiKey, model, searchResults, finalSystemPrompt || undefined);
 		} catch (aiError) {
 			console.error('AI API error:', aiError);
 			return new Response(JSON.stringify({ error: `AI API error: ${aiError instanceof Error ? aiError.message : 'Unknown error'}` }), {
@@ -136,7 +144,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 							'assistant',
 							fullResponse,
 							searchResults ? JSON.stringify(searchResults) : undefined,
-							fullReasoning || undefined
+							fullReasoning || undefined,
+							model
 						);
 					}
 

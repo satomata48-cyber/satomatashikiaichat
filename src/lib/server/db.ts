@@ -30,6 +30,7 @@ export interface Message {
 	content: string;
 	sources: string | null;
 	reasoning: string | null;
+	model: string | null;
 	created_at: string;
 }
 
@@ -133,14 +134,15 @@ export async function createMessage(
 	role: 'user' | 'assistant' | 'system',
 	content: string,
 	sources?: string,
-	reasoning?: string
+	reasoning?: string,
+	model?: string
 ): Promise<Message> {
 	const id = crypto.randomUUID();
 	await db
 		.prepare(
-			'INSERT INTO messages (id, chat_id, role, content, sources, reasoning) VALUES (?, ?, ?, ?, ?, ?)'
+			'INSERT INTO messages (id, chat_id, role, content, sources, reasoning, model) VALUES (?, ?, ?, ?, ?, ?, ?)'
 		)
-		.bind(id, chatId, role, content, sources || null, reasoning || null)
+		.bind(id, chatId, role, content, sources || null, reasoning || null, model || null)
 		.run();
 
 	// Update chat's updated_at
@@ -149,7 +151,7 @@ export async function createMessage(
 		.bind(chatId)
 		.run();
 
-	return { id, chat_id: chatId, role, content, sources: sources || null, reasoning: reasoning || null, created_at: new Date().toISOString() };
+	return { id, chat_id: chatId, role, content, sources: sources || null, reasoning: reasoning || null, model: model || null, created_at: new Date().toISOString() };
 }
 
 export async function getMessagesByChat(db: D1Database, chatId: string): Promise<Message[]> {
