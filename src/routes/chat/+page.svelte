@@ -58,8 +58,8 @@
 	let sidebarOpen = false; // スマホではデフォルトで閉じる
 	let streamingContent = '';
 	let streamingReasoning = '';
-	let selectedProvider: Provider = 'together';
-	let selectedModel = 'deepseek-ai/DeepSeek-V3.1';
+	let selectedProvider: Provider = 'openrouter';
+	let selectedModel = 'deepseek/deepseek-v3.2-exp';
 	let showModelSelector = false;
 	let expandedReasoning: Set<string> = new Set();
 
@@ -73,7 +73,9 @@
 	];
 
 	const openrouterModels: ModelInfo[] = [
+		{ id: 'x-ai/grok-4.1-fast:free', name: 'Grok 4.1 Fast', desc: '無料', icon: '🚀', longContext: true, contextLength: '131K', inputCost: 0, outputCost: 0 },
 		{ id: 'deepseek/deepseek-v3.2-exp', name: 'DeepSeek V3.2', desc: '高性能・格安', icon: '🌊', longContext: true, contextLength: '164K', inputCost: 0.216, outputCost: 0.328 },
+		{ id: 'google/gemini-2.5-flash-preview-09-2025', name: 'Gemini 2.5 Flash', desc: '推論・Google', icon: '💎', reasoning: true, longContext: true, contextLength: '1M', inputCost: 0.30, outputCost: 2.50 },
 		{ id: 'moonshotai/kimi-k2-thinking', name: 'Kimi K2', desc: '推論', icon: '🌙', reasoning: true, longContext: true, contextLength: '256K', inputCost: 0.45, outputCost: 2.35 },
 		{ id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', desc: '推論', icon: '🐋', reasoning: true, longContext: true, contextLength: '164K', inputCost: 0.30, outputCost: 1.20 },
 		{ id: 'qwen/qwen3-next-80b-a3b-thinking', name: 'Qwen3 80B Think', desc: '推論・格安', icon: '🔮', reasoning: true, longContext: true, contextLength: '262K', inputCost: 0.12, outputCost: 1.20 },
@@ -118,9 +120,58 @@
 	let loadingHistory = false;
 	let currentMonth = new Date();
 
+	// カラーテーマ
+	interface ColorTheme {
+		id: string;
+		name: string;
+		color: string; // プレビュー用のカラー
+		light?: boolean; // ライトテーマかどうか
+	}
+
+	const colorThemes: ColorTheme[] = [
+		// ダークテーマ
+		{ id: 'sky', name: 'スカイ', color: '#0ea5e9' },
+		{ id: 'ocean', name: 'オーシャン', color: '#3b82f6' },
+		{ id: 'violet', name: 'バイオレット', color: '#8b5cf6' },
+		{ id: 'rose', name: 'ローズ', color: '#f43f5e' },
+		{ id: 'emerald', name: 'エメラルド', color: '#10b981' },
+		{ id: 'amber', name: 'アンバー', color: '#f59e0b' },
+		// ライトテーマ
+		{ id: 'light-sky', name: 'スカイL', color: '#0ea5e9', light: true },
+		{ id: 'light-ocean', name: 'オーシャンL', color: '#3b82f6', light: true },
+		{ id: 'light-violet', name: 'バイオレットL', color: '#8b5cf6', light: true },
+		{ id: 'light-rose', name: 'ローズL', color: '#f43f5e', light: true },
+		{ id: 'light-emerald', name: 'エメラルドL', color: '#10b981', light: true },
+		{ id: 'light-amber', name: 'アンバーL', color: '#f59e0b', light: true },
+	];
+
+	let selectedTheme = 'sky';
+	let showThemeSelector = false;
+	$: isLightTheme = colorThemes.find(t => t.id === selectedTheme)?.light ?? false;
+	$: currentModel = (selectedProvider === 'together' ? togetherModels : openrouterModels).find(m => m.id === selectedModel) || (selectedProvider === 'together' ? togetherModels : openrouterModels)[0];
+
 	// 残高表示
 	let providerBalance: string | null = null;
 	let loadingBalance = false;
+
+	// カラーテーマを適用
+	function applyTheme(themeId: string) {
+		selectedTheme = themeId;
+		if (themeId === 'sky') {
+			document.documentElement.removeAttribute('data-theme');
+		} else {
+			document.documentElement.setAttribute('data-theme', themeId);
+		}
+		localStorage.setItem('colorTheme', themeId);
+	}
+
+	// 保存されたテーマを読み込み
+	function loadSavedTheme() {
+		const saved = localStorage.getItem('colorTheme');
+		if (saved && colorThemes.some(t => t.id === saved)) {
+			applyTheme(saved);
+		}
+	}
 
 	function toggleReasoning(messageId: string) {
 		if (expandedReasoning.has(messageId)) {
@@ -212,6 +263,8 @@
 		if (window.innerWidth >= 768) {
 			sidebarOpen = true;
 		}
+		// 保存されたテーマを読み込み
+		loadSavedTheme();
 		await loadConversations();
 		await loadTemplates();
 		// 初期プロバイダーの残高を取得
@@ -675,7 +728,7 @@
 	}
 </script>
 
-<div class="h-screen flex bg-dark-950 overflow-hidden" style="height: 100vh; height: 100dvh;">
+<div class="h-screen flex bg-themed-base overflow-hidden" style="height: 100vh; height: 100dvh;">
 	<!-- Mobile Sidebar Overlay -->
 	{#if sidebarOpen}
 		<button
@@ -686,8 +739,8 @@
 	{/if}
 
 	<!-- Sidebar -->
-	<div class="fixed md:relative w-64 h-full bg-dark-900 border-r border-dark-800 flex flex-col z-50 transition-transform duration-300 {sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0">
-		<div class="p-4 border-b border-dark-800">
+	<div class="fixed md:relative w-64 h-full bg-themed-surface border-r border-themed-border flex flex-col z-50 transition-transform duration-300 {sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0">
+		<div class="p-4 border-b border-themed-border">
 			<button on:click={newChat} class="btn-primary w-full flex items-center justify-center gap-2">
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -698,16 +751,16 @@
 
 		<div class="flex-1 overflow-y-auto p-2">
 			{#each conversations as conv}
-				<div class="group flex items-center gap-2 p-2 rounded-lg hover:bg-dark-800 cursor-pointer {currentConversationId === conv.id ? 'bg-dark-800' : ''}">
+				<div class="group flex items-center gap-2 p-2 rounded-lg hover:bg-themed-elevated cursor-pointer {currentConversationId === conv.id ? 'bg-themed-elevated' : ''}">
 					<button
 						on:click={() => loadConversation(conv.id)}
-						class="flex-1 text-left text-sm text-dark-300 truncate"
+						class="flex-1 text-left text-sm text-themed-text-secondary truncate"
 					>
 						{conv.title}
 					</button>
 					<button
 						on:click|stopPropagation={() => deleteConversation(conv.id)}
-						class="opacity-0 group-hover:opacity-100 p-1 text-dark-500 hover:text-red-400"
+						class="opacity-0 group-hover:opacity-100 p-1 text-themed-text-muted hover:text-red-400"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -717,7 +770,7 @@
 			{/each}
 		</div>
 
-		<div class="p-4 border-t border-dark-800 space-y-2">
+		<div class="p-4 border-t border-themed-border space-y-2">
 			<button on:click={openHistory} class="btn-ghost w-full text-sm flex items-center justify-center gap-2">
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -740,8 +793,8 @@
 	<!-- Main Content -->
 	<div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 		<!-- Header -->
-		<header class="h-14 flex-shrink-0 border-b border-dark-800 flex items-center px-4 gap-4 overflow-hidden">
-			<button on:click={() => sidebarOpen = !sidebarOpen} class="md:hidden text-dark-400" aria-label="Toggle sidebar">
+		<header class="h-14 flex-shrink-0 border-b border-themed-border flex items-center px-4 gap-4 overflow-visible relative z-50">
+			<button on:click={() => sidebarOpen = !sidebarOpen} class="md:hidden text-themed-text-secondary" aria-label="Toggle sidebar">
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
 				</svg>
@@ -756,26 +809,26 @@
 			</button>
 
 			<!-- Provider Selector in Header -->
-			<div class="flex items-center gap-1 p-1 bg-dark-800 rounded-lg">
+			<div class="flex items-center gap-1 p-1 bg-themed-elevated rounded-lg">
 				<button
 					on:click={() => selectProvider('together')}
-					class="px-3 py-1 rounded-md text-sm transition-colors {selectedProvider === 'together' ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
+					class="px-3 py-1 rounded-md text-sm transition-colors {selectedProvider === 'together' ? 'bg-primary-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
 				>
 					Together
 				</button>
 				<button
 					on:click={() => selectProvider('openrouter')}
-					class="px-3 py-1 rounded-md text-sm transition-colors {selectedProvider === 'openrouter' ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
+					class="px-3 py-1 rounded-md text-sm transition-colors {selectedProvider === 'openrouter' ? 'bg-primary-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
 				>
 					OpenRouter
 				</button>
 			</div>
 
 			<!-- Balance Display -->
-			<div class="text-xs text-dark-400 hidden sm:block">
+			<div class="text-xs text-themed-text-secondary hidden sm:block">
 				{#if selectedProvider === 'openrouter'}
 					{#if loadingBalance}
-						<span class="text-dark-500">読込中...</span>
+						<span class="text-themed-text-muted">読込中...</span>
 					{:else if providerBalance !== null}
 						<span class="text-green-400">${providerBalance}</span>
 					{/if}
@@ -792,6 +845,49 @@
 			</div>
 
 			<div class="flex-1"></div>
+
+			<!-- Color Theme Selector -->
+			<div class="relative z-[55]">
+				<button
+					on:click={() => showThemeSelector = !showThemeSelector}
+					class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-themed-text-secondary hover:text-themed-text hover:bg-themed-elevated transition-colors"
+					aria-label="テーマカラーを選択"
+				>
+					<div class="w-5 h-5 rounded-full border-2 border-dark-600" style="background-color: {colorThemes.find(t => t.id === selectedTheme)?.color}"></div>
+					<svg class="w-4 h-4 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+					</svg>
+				</button>
+
+				{#if showThemeSelector}
+					<div class="absolute right-0 top-full mt-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 min-w-[220px] z-[60]">
+						<p class="text-xs text-themed-text-muted mb-2 px-1">ダーク</p>
+						<div class="grid grid-cols-3 gap-2 mb-3">
+							{#each colorThemes.filter(t => !t.light) as theme}
+								<button
+									on:click={() => { applyTheme(theme.id); showThemeSelector = false; }}
+									class="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors {selectedTheme === theme.id ? 'ring-2 ring-primary-500 bg-black/20' : 'hover:bg-black/10'}"
+								>
+									<div class="w-7 h-7 rounded-full border-2 {selectedTheme === theme.id ? 'border-white' : 'border-themed-border'}" style="background-color: {theme.color}"></div>
+									<span class="text-[10px] text-themed-text-secondary">{theme.name}</span>
+								</button>
+							{/each}
+						</div>
+						<p class="text-xs text-themed-text-muted mb-2 px-1">ライト</p>
+						<div class="grid grid-cols-3 gap-2">
+							{#each colorThemes.filter(t => t.light) as theme}
+								<button
+									on:click={() => { applyTheme(theme.id); showThemeSelector = false; }}
+									class="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors {selectedTheme === theme.id ? 'ring-2 ring-primary-500 bg-white/20' : 'hover:bg-white/10'}"
+								>
+									<div class="w-7 h-7 rounded-full border-2 {selectedTheme === theme.id ? 'border-gray-800' : 'border-themed-border'}" style="background-color: {theme.color}; background: linear-gradient(135deg, {theme.color} 50%, white 50%);"></div>
+									<span class="text-[10px] text-themed-text-secondary">{theme.name}</span>
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
+			</div>
 		</header>
 
 		<!-- Messages -->
@@ -799,7 +895,7 @@
 			{#if loadingConversation}
 				<div class="h-full flex flex-col items-center justify-center text-center">
 					<div class="w-12 h-12 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mb-4"></div>
-					<p class="text-dark-400">読み込み中...</p>
+					<p class="text-themed-text-secondary">読み込み中...</p>
 				</div>
 			{:else if messages.length === 0 && !streamingContent && !streamingReasoning}
 				<div class="h-full flex flex-col items-center justify-center text-center">
@@ -809,7 +905,7 @@
 						</svg>
 					</div>
 					<h2 class="text-2xl font-bold text-white mb-2">SatomatashikiAIchat</h2>
-					<p class="text-dark-400 max-w-md">
+					<p class="text-themed-text-secondary max-w-md">
 						質問を入力してください。Web検索を有効にすると、最新情報を元に回答します。
 					</p>
 				</div>
@@ -817,7 +913,7 @@
 				<div class="max-w-3xl mx-auto space-y-6 overflow-hidden w-full">
 					{#each messages as message}
 						<div class="flex gap-4 {message.role === 'user' ? 'flex-row-reverse' : ''}">
-							<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center {message.role === 'user' ? 'bg-primary-600' : 'bg-dark-700'}">
+							<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center {message.role === 'user' ? 'bg-primary-600' : 'bg-themed-surface'}">
 								{#if message.role === 'user'}
 									<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -833,7 +929,7 @@
 									<div class="mb-2">
 										<button
 											on:click={() => toggleReasoning(message.id)}
-											class="flex items-center gap-2 text-xs text-dark-400 hover:text-dark-300 transition-colors"
+											class="flex items-center gap-2 text-xs text-themed-text-secondary hover:text-themed-text-secondary transition-colors"
 										>
 											<span class="text-base">📘</span>
 											思考過程
@@ -842,15 +938,15 @@
 											</svg>
 										</button>
 										{#if expandedReasoning.has(message.id)}
-											<div class="mt-2 p-3 bg-dark-900 border border-dark-700 rounded-xl text-xs text-dark-400 whitespace-pre-wrap max-h-64 overflow-y-auto">
+											<div class="mt-2 p-3 bg-themed-surface border border-themed-border rounded-xl text-xs text-themed-text-secondary whitespace-pre-wrap max-h-64 overflow-y-auto">
 												{message.reasoning}
 											</div>
 										{/if}
 									</div>
 								{/if}
-								<div class="inline-block text-left rounded-2xl px-4 py-3 max-w-full overflow-hidden {message.role === 'user' ? 'bg-primary-600 text-white' : 'bg-dark-800 text-dark-200'}">
+								<div class="inline-block text-left rounded-2xl px-4 py-3 max-w-full overflow-hidden {message.role === 'user' ? 'bg-primary-600 text-white' : 'bg-themed-elevated text-themed-text'}">
 									{#if message.role === 'assistant'}
-										<div class="prose prose-invert prose-sm max-w-none break-words overflow-wrap-anywhere overflow-x-hidden">
+										<div class="prose prose-sm max-w-none break-words overflow-wrap-anywhere overflow-x-hidden" style="--tw-prose-body: rgb(var(--text-primary, 226 232 240)); --tw-prose-headings: rgb(var(--text-primary, 226 232 240)); --tw-prose-bold: rgb(var(--text-primary, 226 232 240)); --tw-prose-links: rgb(var(--primary-400)); --tw-prose-code: rgb(var(--text-primary, 226 232 240));">
 											{@html renderMarkdown(message.content)}
 										</div>
 									{:else}
@@ -859,7 +955,7 @@
 								</div>
 								{#if message.image}
 									<div class="mt-2">
-										<img src={message.image} alt="Generated image" class="max-w-md rounded-xl border border-dark-700 shadow-lg" />
+										<img src={message.image} alt="Generated image" class="max-w-md rounded-xl border border-themed-border shadow-lg" />
 										<a href={message.image} download="generated-image.png" class="inline-block mt-2 text-xs text-primary-400 hover:underline">
 											画像をダウンロード
 										</a>
@@ -867,7 +963,7 @@
 								{/if}
 								{#if message.sources && message.sources.length > 0}
 									<div class="mt-2 space-y-1">
-										<p class="text-xs text-dark-500">参考ソース:</p>
+										<p class="text-xs text-themed-text-muted">参考ソース:</p>
 										{#each message.sources as source}
 											<a href={source.url} target="_blank" rel="noopener" class="block text-xs text-primary-400 hover:underline truncate">
 												{source.title}
@@ -877,7 +973,7 @@
 								{/if}
 								{#if message.role === 'assistant' && message.model}
 									{@const modelInfo = getModelDisplayInfo(message.model)}
-									<div class="mt-2 flex items-center gap-1 text-xs text-dark-500">
+									<div class="mt-2 flex items-center gap-1 text-xs text-themed-text-muted">
 										<span>{modelInfo?.icon}</span>
 										<span>{modelInfo?.name}</span>
 									</div>
@@ -888,7 +984,7 @@
 
 					{#if streamingReasoning || streamingContent}
 						<div class="flex gap-4">
-							<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-dark-700">
+							<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-themed-surface">
 								<svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
 								</svg>
@@ -896,23 +992,23 @@
 							<div class="flex-1 min-w-0">
 								{#if streamingReasoning}
 									<div class="mb-2">
-										<div class="flex items-center gap-2 text-xs text-dark-400 mb-2">
+										<div class="flex items-center gap-2 text-xs text-themed-text-secondary mb-2">
 											<span class="text-base">📘</span>
 											思考中...
 										</div>
-										<div class="p-3 bg-dark-900 border border-dark-700 rounded-xl text-xs text-dark-400 whitespace-pre-wrap max-h-64 overflow-y-auto break-words">
+										<div class="p-3 bg-themed-surface border border-themed-border rounded-xl text-xs text-themed-text-secondary whitespace-pre-wrap max-h-64 overflow-y-auto break-words">
 											{streamingReasoning}<span class="animate-pulse">▌</span>
 										</div>
 									</div>
 								{/if}
 								{#if streamingContent}
-									<div class="inline-block text-left rounded-2xl px-4 py-3 bg-dark-800 text-dark-200 max-w-full">
-										<div class="prose prose-invert prose-sm max-w-none break-words overflow-wrap-anywhere">
+									<div class="inline-block text-left rounded-2xl px-4 py-3 bg-themed-elevated text-themed-text max-w-full">
+										<div class="prose prose-sm max-w-none break-words overflow-wrap-anywhere" style="--tw-prose-body: rgb(var(--text-primary, 226 232 240)); --tw-prose-headings: rgb(var(--text-primary, 226 232 240)); --tw-prose-bold: rgb(var(--text-primary, 226 232 240)); --tw-prose-links: rgb(var(--primary-400)); --tw-prose-code: rgb(var(--text-primary, 226 232 240));">
 											{@html renderMarkdown(streamingContent)}<span class="animate-pulse">▌</span>
 										</div>
 									</div>
 									{@const modelInfo = getModelDisplayInfo(selectedModel)}
-									<div class="mt-2 flex items-center gap-1 text-xs text-dark-500">
+									<div class="mt-2 flex items-center gap-1 text-xs text-themed-text-muted">
 										<span>{modelInfo?.icon}</span>
 										<span>{modelInfo?.name}</span>
 									</div>
@@ -923,17 +1019,17 @@
 
 					{#if loading && !streamingContent}
 						<div class="flex gap-4">
-							<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-dark-700">
+							<div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-themed-surface">
 								<svg class="w-5 h-5 text-primary-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
 								</svg>
 							</div>
 							<div class="flex-1 min-w-0">
-								<div class="inline-block rounded-2xl px-4 py-3 bg-dark-800">
+								<div class="inline-block rounded-2xl px-4 py-3 bg-themed-elevated">
 									<div class="flex gap-1">
-										<span class="w-2 h-2 bg-dark-500 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
-										<span class="w-2 h-2 bg-dark-500 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
-										<span class="w-2 h-2 bg-dark-500 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+										<span class="w-2 h-2 bg-themed-text-muted rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+										<span class="w-2 h-2 bg-themed-text-muted rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+										<span class="w-2 h-2 bg-themed-text-muted rounded-full animate-bounce" style="animation-delay: 300ms"></span>
 									</div>
 								</div>
 							</div>
@@ -944,7 +1040,7 @@
 		</div>
 
 		<!-- Input -->
-		<div class="flex-shrink-0 border-t border-dark-800 p-4 overflow-visible" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+		<div class="flex-shrink-0 border-t border-themed-border p-4 overflow-visible" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
 			<div class="max-w-3xl mx-auto w-full">
 				<!-- Image Warning -->
 				{#if imageWarning}
@@ -967,7 +1063,7 @@
 					<div class="flex items-center">
 						<button
 							on:click={() => { enableSearch = !enableSearch; if (enableSearch) enableImageGen = false; }}
-							class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableSearch ? 'bg-primary-600/20 border-primary-500/50 text-primary-400 rounded-r-none border-r-0' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
+							class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableSearch ? 'bg-primary-600/20 border-primary-500/50 text-primary-400 rounded-r-none border-r-0' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
 							<span class="text-base">🔍</span>
 							Web検索
@@ -998,7 +1094,7 @@
 					<!-- DateTime Toggle -->
 					<button
 						on:click={() => enableDateTime = !enableDateTime}
-						class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableDateTime ? 'bg-amber-600/20 border-amber-500/50 text-amber-400' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
+						class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {enableDateTime ? 'bg-amber-600/20 border-amber-500/50 text-amber-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 					>
 						<span class="text-base">🕐</span>
 						日時
@@ -1013,7 +1109,7 @@
 					<div class="relative">
 						<button
 							on:click={() => showTemplateSelector = !showTemplateSelector}
-							class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {selectedTemplateId ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' : 'bg-dark-800 border-dark-700 text-dark-400 hover:bg-dark-700'}"
+							class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {selectedTemplateId ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
 							<span class="text-base">📝</span>
 							{selectedTemplateId ? getSelectedTemplate()?.name || 'テンプレート' : 'テンプレート'}
@@ -1030,9 +1126,9 @@
 						</button>
 
 						{#if showTemplateSelector}
-							<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-10 p-3 min-w-[250px]">
+							<div class="absolute bottom-full left-0 mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl z-[60] p-3 min-w-[250px]">
 								<div class="flex items-center justify-between mb-2">
-									<p class="text-xs text-dark-500">テンプレートを選択</p>
+									<p class="text-xs text-themed-text-muted">テンプレートを選択</p>
 									<button
 										on:click={() => { showTemplateSelector = false; openTemplateEditor(); }}
 										class="text-xs text-primary-400 hover:underline"
@@ -1041,13 +1137,13 @@
 									</button>
 								</div>
 								{#if templates.length === 0}
-									<p class="text-xs text-dark-500 py-2">テンプレートがありません</p>
+									<p class="text-xs text-themed-text-muted py-2">テンプレートがありません</p>
 								{:else}
 									<div class="space-y-1.5 max-h-48 overflow-y-auto">
 										{#each templates as template}
 											<button
 												on:click={() => { selectedTemplateId = template.id; showTemplateSelector = false; }}
-												class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedTemplateId === template.id ? 'bg-emerald-600/20 border border-emerald-500/50 text-emerald-400' : 'bg-dark-700 text-dark-300 hover:bg-dark-600'}"
+												class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedTemplateId === template.id ? 'bg-emerald-600/20 border border-emerald-500/50 text-emerald-400' : 'bg-themed-surface text-themed-text-secondary hover:bg-themed-border/50'}"
 											>
 												<span class="flex-1 text-left truncate">{template.name}</span>
 											</button>
@@ -1059,17 +1155,17 @@
 					</div>
 
 					<!-- Mode Selector: Text / Image -->
-					<div class="flex items-center gap-1 p-1 bg-dark-800 rounded-lg">
+					<div class="flex items-center gap-1 p-1 bg-themed-elevated rounded-lg">
 						<button
 							on:click={() => { enableImageGen = false; }}
-							class="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-colors {!enableImageGen ? 'bg-primary-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
+							class="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-colors {!enableImageGen ? 'bg-primary-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
 						>
 							<span class="text-sm">💬</span>
 							テキスト
 						</button>
 						<button
 							on:click={() => { enableImageGen = true; enableSearch = false; }}
-							class="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-colors {enableImageGen ? 'bg-pink-600 text-white' : 'text-dark-400 hover:text-dark-200'}"
+							class="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-colors {enableImageGen ? 'bg-pink-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
 						>
 							<span class="text-sm">🎨</span>
 							画像
@@ -1078,10 +1174,10 @@
 
 					{#if enableImageGen}
 						<!-- Image Model Selector -->
-						<div class="relative">
+						<div class="relative z-[55]">
 							<button
 								on:click={() => showImageModelSelector = !showImageModelSelector}
-								class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors bg-dark-800 border-dark-700 text-dark-300 hover:bg-dark-700 hover:text-dark-200"
+								class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
 							>
 								<span class="text-base">🖼️</span>
 								{imageModels.find(m => m.id === selectedImageModel)?.name || 'FLUX.1'}
@@ -1091,16 +1187,16 @@
 							</button>
 
 							{#if showImageModelSelector}
-								<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-10 p-3 min-w-[280px]">
-									<p class="text-xs text-dark-500 px-2 py-1 mb-2">画像生成モデルを選択</p>
+								<div class="absolute bottom-full left-0 mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl z-[60] p-3 min-w-[280px]">
+									<p class="text-xs text-themed-text-muted px-2 py-1 mb-2">画像生成モデルを選択</p>
 									<div class="space-y-1.5">
 										{#each imageModels as model}
 											<button
 												on:click={() => { selectedImageModel = model.id; showImageModelSelector = false; }}
-												class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedImageModel === model.id ? 'bg-pink-600/20 border border-pink-500/50 text-pink-400' : 'bg-dark-700 text-dark-300 hover:bg-dark-600'}"
+												class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedImageModel === model.id ? 'bg-pink-600/20 border border-pink-500/50 text-pink-400' : 'bg-themed-surface text-themed-text-secondary hover:bg-themed-border/50'}"
 											>
 												<span class="flex-1 text-left">{model.name}</span>
-												<span class="text-xs text-dark-400">{model.desc}</span>
+												<span class="text-xs text-themed-text-secondary">{model.desc}</span>
 												<span class="px-1.5 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded">{model.cost}</span>
 											</button>
 										{/each}
@@ -1110,30 +1206,30 @@
 						</div>
 					{:else}
 						<!-- LLM Model Selector Button -->
-						<div class="relative">
+						<div class="relative z-[55]">
 							<button
 								on:click={() => showModelSelector = !showModelSelector}
-								class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors bg-dark-800 border-dark-700 text-dark-300 hover:bg-dark-700 hover:text-dark-200"
+								class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
 							>
-								<span class="text-base">{getSelectedModel().icon}</span>
-								{getSelectedModel().name}
-								<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{getSelectedModel().contextLength}</span>
-								{#if getSelectedModel().longContext}
+								<span class="text-base">{currentModel.icon}</span>
+								{currentModel.name}
+								<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{currentModel.contextLength}</span>
+								{#if currentModel.longContext}
 									<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded">履歴参照</span>
 								{/if}
-								{#if getSelectedModel().reasoning}
+								{#if currentModel.reasoning}
 									<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
 								{/if}
 							</button>
 
 							{#if showModelSelector}
-								<div class="absolute bottom-full left-0 mb-2 bg-dark-800 border border-dark-700 rounded-xl shadow-xl z-50 p-3 min-w-[480px]">
-									<p class="text-xs text-dark-500 px-2 py-1 mb-2">モデルを選択（料金: $/1Mトークン）</p>
+								<div class="absolute bottom-full left-0 mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 min-w-[480px] z-[60]">
+									<p class="text-xs text-themed-text-muted px-2 py-1 mb-2">モデルを選択（料金: $/1Mトークン）</p>
 									<div class="space-y-1.5">
 										{#each getModels() as model}
 											<button
 												on:click={() => selectModel(model.id)}
-												class="group/model flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-dark-700 text-dark-300 hover:bg-dark-600'}"
+												class="group/model flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-surface text-themed-text-secondary hover:bg-themed-border/50'}"
 											>
 												<span class="text-base">{model.icon}</span>
 												<span class="flex-1 text-left">{model.name}</span>
@@ -1142,11 +1238,11 @@
 													<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
 												{/if}
 												<span class="px-1.5 py-0.5 text-xs bg-amber-600/30 text-amber-400 rounded whitespace-nowrap">${model.inputCost}/${model.outputCost}</span>
-												<span class="text-xs text-dark-400 font-medium whitespace-nowrap">{calcDailyConversations(model)}</span>
+												<span class="text-xs text-themed-text-secondary font-medium whitespace-nowrap">{calcDailyConversations(model)}</span>
 											</button>
 										{/each}
 									</div>
-									<p class="text-xs text-dark-500 mt-2 px-2">※料金は入力/出力、回数は1000円/月の目安</p>
+									<p class="text-xs text-themed-text-muted mt-2 px-2">※料金は入力/出力、回数は1000円/月の目安</p>
 								</div>
 							{/if}
 						</div>
@@ -1181,23 +1277,15 @@
 	</div>
 </div>
 
-<!-- Click outside to close selectors -->
-{#if showModelSelector || showImageModelSelector}
-	<button
-		class="fixed inset-0 z-0"
-		on:click={() => { showModelSelector = false; showImageModelSelector = false; }}
-		aria-label="Close selector"
-	></button>
-{/if}
 
 <!-- Settings Modal -->
 {#if showSettings}
 	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-		<div class="bg-dark-900 border border-dark-700 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden">
+		<div class="bg-themed-surface border border-themed-border rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden">
 			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-dark-700">
+			<div class="flex items-center justify-between p-4 border-b border-themed-border">
 				<h2 class="text-lg font-semibold text-white">設定</h2>
-				<button on:click={() => showSettings = false} class="text-dark-400 hover:text-white" aria-label="Close settings">
+				<button on:click={() => showSettings = false} class="text-themed-text-secondary hover:text-white" aria-label="Close settings">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
 					</svg>
@@ -1206,19 +1294,48 @@
 
 			<!-- Content -->
 			<div class="p-4 space-y-6 overflow-y-auto max-h-[60vh]">
+				<!-- Color Theme -->
+				<div>
+					<h3 class="text-sm font-medium text-themed-text-secondary mb-2">テーマカラー</h3>
+					<p class="text-xs text-themed-text-muted mb-2">ダーク</p>
+					<div class="grid grid-cols-6 gap-2 mb-4">
+						{#each colorThemes.filter(t => !t.light) as theme}
+							<button
+								on:click={() => applyTheme(theme.id)}
+								class="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors {selectedTheme === theme.id ? 'ring-2 ring-primary-500 bg-black/20' : 'hover:bg-black/10'}"
+							>
+								<div class="w-8 h-8 rounded-full border-2 {selectedTheme === theme.id ? 'border-white' : 'border-themed-border'}" style="background-color: {theme.color}"></div>
+								<span class="text-[10px] text-themed-text-secondary">{theme.name}</span>
+							</button>
+						{/each}
+					</div>
+					<p class="text-xs text-themed-text-muted mb-2">ライト</p>
+					<div class="grid grid-cols-6 gap-2">
+						{#each colorThemes.filter(t => t.light) as theme}
+							<button
+								on:click={() => applyTheme(theme.id)}
+								class="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors {selectedTheme === theme.id ? 'ring-2 ring-primary-500 bg-white/20' : 'hover:bg-white/10'}"
+							>
+								<div class="w-8 h-8 rounded-full border-2 {selectedTheme === theme.id ? 'border-gray-800' : 'border-themed-border'}" style="background-color: {theme.color}; background: linear-gradient(135deg, {theme.color} 50%, white 50%);"></div>
+								<span class="text-[10px] text-themed-text-secondary">{theme.name}</span>
+							</button>
+						{/each}
+					</div>
+				</div>
+
 				<!-- Default Provider -->
 				<div>
-					<h3 class="text-sm font-medium text-dark-300 mb-2">デフォルトプロバイダー</h3>
+					<h3 class="text-sm font-medium text-themed-text-secondary mb-2">デフォルトプロバイダー</h3>
 					<div class="flex gap-2">
 						<button
 							on:click={() => selectProvider('together')}
-							class="flex-1 px-4 py-2 rounded-lg border text-sm transition-colors {selectedProvider === 'together' ? 'bg-primary-600 border-primary-500 text-white' : 'bg-dark-800 border-dark-700 text-dark-300 hover:bg-dark-700'}"
+							class="flex-1 px-4 py-2 rounded-lg border text-sm transition-colors {selectedProvider === 'together' ? 'bg-primary-600 border-primary-500 text-white' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
 							Together AI
 						</button>
 						<button
 							on:click={() => selectProvider('openrouter')}
-							class="flex-1 px-4 py-2 rounded-lg border text-sm transition-colors {selectedProvider === 'openrouter' ? 'bg-primary-600 border-primary-500 text-white' : 'bg-dark-800 border-dark-700 text-dark-300 hover:bg-dark-700'}"
+							class="flex-1 px-4 py-2 rounded-lg border text-sm transition-colors {selectedProvider === 'openrouter' ? 'bg-primary-600 border-primary-500 text-white' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
 							OpenRouter
 						</button>
@@ -1227,16 +1344,16 @@
 
 				<!-- Default Text Model -->
 				<div>
-					<h3 class="text-sm font-medium text-dark-300 mb-2">デフォルトテキストモデル</h3>
+					<h3 class="text-sm font-medium text-themed-text-secondary mb-2">デフォルトテキストモデル</h3>
 					<div class="space-y-1.5 max-h-48 overflow-y-auto">
 						{#each getModels() as model}
 							<button
 								on:click={() => selectModel(model.id)}
-								class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-dark-800 text-dark-300 hover:bg-dark-700'}"
+								class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-elevated'}"
 							>
 								<span class="text-base">{model.icon}</span>
 								<span class="flex-1 text-left">{model.name}</span>
-								<span class="text-xs text-dark-400">{model.desc}</span>
+								<span class="text-xs text-themed-text-secondary">{model.desc}</span>
 							</button>
 						{/each}
 					</div>
@@ -1244,15 +1361,15 @@
 
 				<!-- Default Image Model -->
 				<div>
-					<h3 class="text-sm font-medium text-dark-300 mb-2">デフォルト画像モデル</h3>
+					<h3 class="text-sm font-medium text-themed-text-secondary mb-2">デフォルト画像モデル</h3>
 					<div class="space-y-1.5">
 						{#each imageModels as model}
 							<button
 								on:click={() => selectedImageModel = model.id}
-								class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedImageModel === model.id ? 'bg-pink-600/20 border border-pink-500/50 text-pink-400' : 'bg-dark-800 text-dark-300 hover:bg-dark-700'}"
+								class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedImageModel === model.id ? 'bg-pink-600/20 border border-pink-500/50 text-pink-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-elevated'}"
 							>
 								<span class="flex-1 text-left">{model.name}</span>
-								<span class="text-xs text-dark-400">{model.desc}</span>
+								<span class="text-xs text-themed-text-secondary">{model.desc}</span>
 								<span class="px-1.5 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded">{model.cost}</span>
 							</button>
 						{/each}
@@ -1262,7 +1379,7 @@
 				<!-- Prompt Templates -->
 				<div>
 					<div class="flex items-center justify-between mb-2">
-						<h3 class="text-sm font-medium text-dark-300">テンプレートプロンプト</h3>
+						<h3 class="text-sm font-medium text-themed-text-secondary">テンプレートプロンプト</h3>
 						<button
 							on:click={() => { showSettings = false; openTemplateEditor(); }}
 							class="text-xs text-primary-400 hover:underline"
@@ -1271,21 +1388,21 @@
 						</button>
 					</div>
 					{#if templates.length === 0}
-						<p class="text-xs text-dark-500 py-2">テンプレートがありません。新規作成してください。</p>
+						<p class="text-xs text-themed-text-muted py-2">テンプレートがありません。新規作成してください。</p>
 					{:else}
 						<div class="space-y-1.5 max-h-32 overflow-y-auto">
 							{#each templates as template}
-								<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark-800 text-dark-300">
+								<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-themed-elevated text-themed-text-secondary">
 									<span class="flex-1 text-sm truncate">{template.name}</span>
 									<button
 										on:click={() => { showSettings = false; openTemplateEditor(template); }}
-										class="text-xs text-dark-400 hover:text-primary-400"
+										class="text-xs text-themed-text-secondary hover:text-primary-400"
 									>
 										編集
 									</button>
 									<button
 										on:click={() => deleteTemplate(template.id)}
-										class="text-xs text-dark-400 hover:text-red-400"
+										class="text-xs text-themed-text-secondary hover:text-red-400"
 									>
 										削除
 									</button>
@@ -1296,9 +1413,9 @@
 				</div>
 
 				<!-- About -->
-				<div class="pt-4 border-t border-dark-700">
-					<h3 class="text-sm font-medium text-dark-300 mb-2">アプリ情報</h3>
-					<div class="text-xs text-dark-500 space-y-1">
+				<div class="pt-4 border-t border-themed-border">
+					<h3 class="text-sm font-medium text-themed-text-secondary mb-2">アプリ情報</h3>
+					<div class="text-xs text-themed-text-muted space-y-1">
 						<p>SatomatashikiAIchat v1.0</p>
 						<p>Powered by Together AI & OpenRouter</p>
 					</div>
@@ -1306,7 +1423,7 @@
 			</div>
 
 			<!-- Footer -->
-			<div class="p-4 border-t border-dark-700">
+			<div class="p-4 border-t border-themed-border">
 				<button on:click={() => showSettings = false} class="btn-primary w-full">
 					閉じる
 				</button>
@@ -1318,11 +1435,11 @@
 <!-- History Modal -->
 {#if showHistory}
 	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-		<div class="bg-dark-900 border border-dark-700 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+		<div class="bg-themed-surface border border-themed-border rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
 			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-dark-700">
+			<div class="flex items-center justify-between p-4 border-b border-themed-border">
 				<h2 class="text-lg font-semibold text-white">使用履歴</h2>
-				<button on:click={() => showHistory = false} class="text-dark-400 hover:text-white" aria-label="Close history">
+				<button on:click={() => showHistory = false} class="text-themed-text-secondary hover:text-white" aria-label="Close history">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
 					</svg>
@@ -1333,7 +1450,7 @@
 			<div class="p-4">
 				<!-- Month Navigation -->
 				<div class="flex items-center justify-between mb-4">
-					<button on:click={() => changeMonth(-1)} class="p-2 text-dark-400 hover:text-white rounded-lg hover:bg-dark-800">
+					<button on:click={() => changeMonth(-1)} class="p-2 text-themed-text-secondary hover:text-white rounded-lg hover:bg-themed-elevated">
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 						</svg>
@@ -1341,7 +1458,7 @@
 					<span class="text-white font-medium">
 						{currentMonth.getFullYear()}年{currentMonth.getMonth() + 1}月
 					</span>
-					<button on:click={() => changeMonth(1)} class="p-2 text-dark-400 hover:text-white rounded-lg hover:bg-dark-800">
+					<button on:click={() => changeMonth(1)} class="p-2 text-themed-text-secondary hover:text-white rounded-lg hover:bg-themed-elevated">
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 						</svg>
@@ -1356,7 +1473,7 @@
 					<!-- Day Headers -->
 					<div class="grid grid-cols-7 gap-1 mb-2">
 						{#each ['日', '月', '火', '水', '木', '金', '土'] as day, i}
-							<div class="text-center text-xs text-dark-500 py-1 {i === 0 ? 'text-red-400' : ''} {i === 6 ? 'text-blue-400' : ''}">
+							<div class="text-center text-xs text-themed-text-muted py-1 {i === 0 ? 'text-red-400' : ''} {i === 6 ? 'text-blue-400' : ''}">
 								{day}
 							</div>
 						{/each}
@@ -1374,7 +1491,7 @@
 							{@const day = i + 1}
 							{@const usage = getUsageForDay(day)}
 							{@const dayOfWeek = (getFirstDayOfMonth() + i) % 7}
-							<div class="aspect-square flex flex-col items-center justify-center rounded-lg text-sm {usage > 0 ? 'bg-primary-600/20' : 'bg-dark-800'} {dayOfWeek === 0 ? 'text-red-400' : ''} {dayOfWeek === 6 ? 'text-blue-400' : 'text-dark-300'}">
+							<div class="aspect-square flex flex-col items-center justify-center rounded-lg text-sm {usage > 0 ? 'bg-primary-600/20' : 'bg-themed-elevated'} {dayOfWeek === 0 ? 'text-red-400' : ''} {dayOfWeek === 6 ? 'text-blue-400' : 'text-themed-text-secondary'}">
 								<span class="text-xs">{day}</span>
 								{#if usage > 0}
 									<span class="text-[10px] text-primary-400 font-medium">{usage}回</span>
@@ -1384,9 +1501,9 @@
 					</div>
 
 					<!-- Summary -->
-					<div class="mt-4 pt-4 border-t border-dark-700">
+					<div class="mt-4 pt-4 border-t border-themed-border">
 						<div class="flex justify-between text-sm">
-							<span class="text-dark-400">今月の合計</span>
+							<span class="text-themed-text-secondary">今月の合計</span>
 							<span class="text-white font-medium">{usageHistory.reduce((sum, u) => sum + u.count, 0)}回</span>
 						</div>
 					</div>
@@ -1394,7 +1511,7 @@
 			</div>
 
 			<!-- Footer -->
-			<div class="p-4 border-t border-dark-700">
+			<div class="p-4 border-t border-themed-border">
 				<button on:click={() => showHistory = false} class="btn-primary w-full">
 					閉じる
 				</button>
@@ -1406,13 +1523,13 @@
 <!-- Template Editor Modal -->
 {#if showTemplateEditor}
 	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-		<div class="bg-dark-900 border border-dark-700 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+		<div class="bg-themed-surface border border-themed-border rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
 			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-dark-700">
+			<div class="flex items-center justify-between p-4 border-b border-themed-border">
 				<h2 class="text-lg font-semibold text-white">
 					{editingTemplate ? 'テンプレート編集' : '新規テンプレート'}
 				</h2>
-				<button on:click={() => { showTemplateEditor = false; editingTemplate = null; }} class="text-dark-400 hover:text-white" aria-label="Close editor">
+				<button on:click={() => { showTemplateEditor = false; editingTemplate = null; }} class="text-themed-text-secondary hover:text-white" aria-label="Close editor">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
 					</svg>
@@ -1422,7 +1539,7 @@
 			<!-- Content -->
 			<div class="p-4 space-y-4">
 				<div>
-					<label for="template-name" class="block text-sm font-medium text-dark-300 mb-1">テンプレート名</label>
+					<label for="template-name" class="block text-sm font-medium text-themed-text-secondary mb-1">テンプレート名</label>
 					<input
 						id="template-name"
 						type="text"
@@ -1432,7 +1549,7 @@
 					/>
 				</div>
 				<div>
-					<label for="template-content" class="block text-sm font-medium text-dark-300 mb-1">プロンプト内容</label>
+					<label for="template-content" class="block text-sm font-medium text-themed-text-secondary mb-1">プロンプト内容</label>
 					<textarea
 						id="template-content"
 						bind:value={newTemplateContent}
@@ -1440,12 +1557,12 @@
 						rows="6"
 						class="input-field w-full resize-none"
 					></textarea>
-					<p class="text-xs text-dark-500 mt-1">このプロンプトがシステムプロンプトとしてAIに送信されます</p>
+					<p class="text-xs text-themed-text-muted mt-1">このプロンプトがシステムプロンプトとしてAIに送信されます</p>
 				</div>
 			</div>
 
 			<!-- Footer -->
-			<div class="p-4 border-t border-dark-700 flex gap-2">
+			<div class="p-4 border-t border-themed-border flex gap-2">
 				<button on:click={() => { showTemplateEditor = false; editingTemplate = null; }} class="btn-ghost flex-1">
 					キャンセル
 				</button>
