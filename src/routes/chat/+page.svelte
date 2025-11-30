@@ -1159,7 +1159,7 @@
 					<!-- Template Selector -->
 					<div class="relative z-[100] flex-shrink-0 flex items-center gap-1">
 						<button
-							on:click={toggleTemplateSelector}
+							on:click={() => { showTemplateSelector = !showTemplateSelector; }}
 							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {selectedTemplateId ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
 							<span class="text-base">📝</span>
@@ -1260,7 +1260,7 @@
 						<!-- LLM Model Selector Button -->
 						<div class="relative z-[100] flex-shrink-0">
 							<button
-								on:click={toggleModelSelector}
+								on:click={() => { showModelSelector = !showModelSelector; }}
 								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
 							>
 								<span class="text-base">{currentModel.icon}</span>
