@@ -266,22 +266,36 @@
 		showThemeSelector = false;
 	}
 
-	// 特定のセレクターを開く（他は閉じる）
-	function openSelector(selector: 'model' | 'template' | 'image' | 'theme') {
-		closeAllSelectors();
-		switch (selector) {
-			case 'model':
-				showModelSelector = true;
-				break;
-			case 'template':
-				showTemplateSelector = true;
-				break;
-			case 'image':
-				showImageModelSelector = true;
-				break;
-			case 'theme':
-				showThemeSelector = true;
-				break;
+	// 特定のセレクターをトグル（他は閉じる）
+	function toggleSelector(selector: 'model' | 'template' | 'image' | 'theme') {
+		const wasOpen =
+			selector === 'model' ? showModelSelector :
+			selector === 'template' ? showTemplateSelector :
+			selector === 'image' ? showImageModelSelector :
+			showThemeSelector;
+
+		// 全て閉じる
+		showModelSelector = false;
+		showTemplateSelector = false;
+		showImageModelSelector = false;
+		showThemeSelector = false;
+
+		// 閉じてた場合のみ開く
+		if (!wasOpen) {
+			switch (selector) {
+				case 'model':
+					showModelSelector = true;
+					break;
+				case 'template':
+					showTemplateSelector = true;
+					break;
+				case 'image':
+					showImageModelSelector = true;
+					break;
+				case 'theme':
+					showThemeSelector = true;
+					break;
+			}
 		}
 	}
 
@@ -887,7 +901,7 @@
 			<!-- Color Theme Selector -->
 			<div class="relative z-[100]">
 				<button
-					on:click={() => showThemeSelector ? closeAllSelectors() : openSelector('theme')}
+					on:click|stopPropagation={() => toggleSelector('theme')}
 					class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-themed-text-secondary hover:text-themed-text hover:bg-themed-elevated transition-colors"
 					aria-label="テーマカラーを選択"
 				>
@@ -1148,7 +1162,7 @@
 					<!-- Template Selector -->
 					<div class="relative z-[100] flex-shrink-0 flex items-center gap-1">
 						<button
-							on:click={() => showTemplateSelector ? closeAllSelectors() : openSelector('template')}
+							on:click|stopPropagation={() => toggleSelector('template')}
 							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {selectedTemplateId ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
 							<span class="text-base">📝</span>
@@ -1217,7 +1231,7 @@
 						<!-- Image Model Selector -->
 						<div class="relative z-[100] flex-shrink-0">
 							<button
-								on:click={() => showImageModelSelector ? closeAllSelectors() : openSelector('image')}
+								on:click|stopPropagation={() => toggleSelector('image')}
 								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
 							>
 								<span class="text-base">🖼️</span>
@@ -1249,7 +1263,7 @@
 						<!-- LLM Model Selector Button -->
 						<div class="relative z-[100] flex-shrink-0">
 							<button
-								on:click={() => showModelSelector ? closeAllSelectors() : openSelector('model')}
+								on:click|stopPropagation={() => toggleSelector('model')}
 								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
 							>
 								<span class="text-base">{currentModel.icon}</span>
