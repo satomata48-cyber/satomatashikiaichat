@@ -842,13 +842,16 @@
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
 				</svg>
 			</button>
-			<!-- Mobile: New Chat Button -->
-			<button on:click={newChat} class="md:hidden p-2 text-primary-400 active:bg-themed-elevated rounded-lg" aria-label="新しいチャット">
+			<!-- Mobile: New Chat Button + Title -->
+			<button on:click={newChat} class="md:hidden p-2 text-primary-400 active:bg-themed-elevated rounded-lg flex-shrink-0" aria-label="新しいチャット">
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
 				</svg>
 			</button>
-			<button on:click={newChat} class="hidden md:flex items-center gap-2 hover:opacity-80 transition-opacity">
+			<!-- Mobile Title -->
+			<span class="md:hidden font-semibold text-white text-sm truncate">SatomatashikiAIchat</span>
+			<!-- Desktop: Logo + Title -->
+			<button on:click={newChat} class="hidden md:flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
 				<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
 					<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -1109,7 +1112,7 @@
 				{/if}
 
 				<!-- Options Bar -->
-				<div class="flex items-center gap-2 mb-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide" style="-webkit-overflow-scrolling: touch;">
+				<div class="flex items-center gap-2 mb-3 flex-wrap">
 					<!-- Web Search Toggle (一番左) -->
 					<div class="flex items-center flex-shrink-0">
 						<button
@@ -1157,9 +1160,9 @@
 					</button>
 
 					<!-- Template Selector -->
-					<div class="relative z-[100] flex-shrink-0 flex items-center gap-1">
+					<div class="relative flex-shrink-0 flex items-center gap-1">
 						<button
-							on:click={() => { showTemplateSelector = !showTemplateSelector; }}
+							on:click={() => showTemplateSelector = !showTemplateSelector}
 							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {selectedTemplateId ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
 							<span class="text-base">📝</span>
@@ -1178,7 +1181,7 @@
 						{/if}
 
 						{#if showTemplateSelector}
-							<div class="fixed sm:absolute bottom-16 sm:bottom-full left-2 right-2 sm:left-0 sm:right-auto mb-0 sm:mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl z-[200] p-3 sm:min-w-[250px] max-w-[calc(100vw-1rem)]">
+							<div class="absolute left-0 bottom-full mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 min-w-[250px] z-[9999]">
 								<div class="flex items-center justify-between mb-2">
 									<p class="text-xs text-themed-text-muted">テンプレートを選択</p>
 									<button
@@ -1258,9 +1261,9 @@
 						</div>
 					{:else}
 						<!-- LLM Model Selector Button -->
-						<div class="relative z-[100] flex-shrink-0">
+						<div class="relative flex-shrink-0">
 							<button
-								on:click={() => { showModelSelector = !showModelSelector; }}
+								on:click={() => showModelSelector = !showModelSelector}
 								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
 							>
 								<span class="text-base">{currentModel.icon}</span>
@@ -1272,7 +1275,7 @@
 							</button>
 
 							{#if showModelSelector}
-								<div class="fixed sm:absolute bottom-16 sm:bottom-full left-2 right-2 sm:left-0 sm:right-auto mb-0 sm:mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 sm:min-w-[420px] max-w-[calc(100vw-1rem)] z-[200] max-h-[60vh] overflow-y-auto">
+								<div class="absolute left-0 bottom-full mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 min-w-[420px] max-h-[60vh] overflow-y-auto z-[9999]">
 									<p class="text-xs text-themed-text-muted px-2 py-1 mb-2">モデルを選択</p>
 									<div class="space-y-1.5">
 										{#each getModels() as model}
