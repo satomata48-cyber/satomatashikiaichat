@@ -255,16 +255,22 @@
 @layer base {
 	html {
 		@apply scroll-smooth;
+		/* iOS Safari の高さ問題対応 */
+		height: 100%;
+		height: -webkit-fill-available;
 	}
 
 	body {
 		@apply antialiased;
 		margin: 0;
+		min-height: 100%;
+		min-height: 100dvh;
+		min-height: -webkit-fill-available;
+		/* タップハイライトを無効化 */
+		-webkit-tap-highlight-color: transparent;
 		/* iOS PWA セーフエリア対応 */
 		padding-left: env(safe-area-inset-left);
 		padding-right: env(safe-area-inset-right);
-		padding-bottom: env(safe-area-inset-bottom);
-		padding-top: env(safe-area-inset-top);
 	}
 
 	/* iOS PWA (standalone mode) のみ position: fixed を適用 */
@@ -278,6 +284,14 @@
 			bottom: 0;
 			width: 100%;
 			height: 100%;
+		}
+	}
+
+	/* モバイルでのタッチ操作改善 */
+	@media (hover: none) and (pointer: coarse) {
+		/* タッチフィードバック */
+		button:active, a:active {
+			opacity: 0.7;
 		}
 	}
 
@@ -351,6 +365,15 @@
 }
 
 @layer utilities {
+	/* スクロールバー非表示 */
+	.scrollbar-hide {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+	.scrollbar-hide::-webkit-scrollbar {
+		display: none;
+	}
+
 	/* テキスト折り返し */
 	.overflow-wrap-anywhere {
 		overflow-wrap: anywhere;
