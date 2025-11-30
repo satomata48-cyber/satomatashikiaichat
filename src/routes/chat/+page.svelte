@@ -849,7 +849,7 @@
 				</svg>
 			</button>
 			<!-- Mobile Title -->
-			<span class="md:hidden font-semibold text-white text-sm truncate">SatomatashikiAIchat</span>
+			<span class="md:hidden font-semibold text-themed-text text-sm truncate">SatomatashikiAIchat</span>
 			<!-- Desktop: Logo + Title -->
 			<button on:click={newChat} class="hidden md:flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
 				<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
@@ -857,7 +857,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
 					</svg>
 				</div>
-				<span class="font-semibold text-white">SatomatashikiAIchat</span>
+				<span class="font-semibold text-themed-text">SatomatashikiAIchat</span>
 			</button>
 
 			<!-- Provider Selector in Header -->
