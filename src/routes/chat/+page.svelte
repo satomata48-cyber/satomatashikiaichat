@@ -958,7 +958,7 @@
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
 						</svg>
 					</div>
-					<h2 class="text-2xl font-bold text-white mb-2">SatomatashikiAIchat</h2>
+					<h2 class="text-2xl font-bold text-themed-text mb-2">SatomatashikiAIchat</h2>
 					<p class="text-themed-text-secondary max-w-md">
 						質問を入力してください。Web検索を有効にすると、最新情報を元に回答します。
 					</p>

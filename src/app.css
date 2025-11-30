@@ -329,7 +329,11 @@
 	}
 
 	.btn-ghost {
-		@apply btn bg-transparent text-dark-300 hover:bg-dark-800 hover:text-dark-100;
+		@apply btn bg-transparent hover:bg-themed-elevated;
+		color: rgb(var(--text-secondary, 148 163 184));
+	}
+	.btn-ghost:hover {
+		color: rgb(var(--text-primary, 226 232 240));
 	}
 
 	/* 入力フィールド */
