@@ -258,6 +258,33 @@
 		showModelSelector = false;
 	}
 
+	// 全てのセレクターを閉じる
+	function closeAllSelectors() {
+		showModelSelector = false;
+		showTemplateSelector = false;
+		showImageModelSelector = false;
+		showThemeSelector = false;
+	}
+
+	// 特定のセレクターを開く（他は閉じる）
+	function openSelector(selector: 'model' | 'template' | 'image' | 'theme') {
+		closeAllSelectors();
+		switch (selector) {
+			case 'model':
+				showModelSelector = true;
+				break;
+			case 'template':
+				showTemplateSelector = true;
+				break;
+			case 'image':
+				showImageModelSelector = true;
+				break;
+			case 'theme':
+				showThemeSelector = true;
+				break;
+		}
+	}
+
 	onMount(async () => {
 		// PC画面サイズ（768px以上）ではサイドバーを開く
 		if (window.innerWidth >= 768) {
@@ -750,7 +777,7 @@
 		</div>
 
 		<div class="flex-1 overflow-y-auto p-2">
-			{#each conversations as conv}
+			{#each conversations.slice(0, 15) as conv}
 				<div class="group flex items-center gap-2 p-2 rounded-lg hover:bg-themed-elevated cursor-pointer {currentConversationId === conv.id ? 'bg-themed-elevated' : ''}">
 					<button
 						on:click={() => loadConversation(conv.id)}
@@ -768,6 +795,9 @@
 					</button>
 				</div>
 			{/each}
+			{#if conversations.length > 15}
+				<p class="text-xs text-themed-text-muted text-center py-2">他{conversations.length - 15}件の履歴</p>
+			{/if}
 		</div>
 
 		<div class="p-4 border-t border-themed-border space-y-2">
@@ -855,9 +885,9 @@
 			<div class="flex-1"></div>
 
 			<!-- Color Theme Selector -->
-			<div class="relative z-[55]">
+			<div class="relative z-[100]">
 				<button
-					on:click={() => showThemeSelector = !showThemeSelector}
+					on:click={() => showThemeSelector ? closeAllSelectors() : openSelector('theme')}
 					class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-themed-text-secondary hover:text-themed-text hover:bg-themed-elevated transition-colors"
 					aria-label="テーマカラーを選択"
 				>
@@ -868,7 +898,7 @@
 				</button>
 
 				{#if showThemeSelector}
-					<div class="absolute right-0 top-full mt-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 min-w-[200px] sm:min-w-[220px] z-[60]">
+					<div class="absolute right-0 top-full mt-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 min-w-[200px] sm:min-w-[220px] z-[200]">
 						<p class="text-xs text-themed-text-muted mb-2 px-1">ダーク</p>
 						<div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-3">
 							{#each colorThemes.filter(t => !t.light) as theme}
@@ -899,7 +929,9 @@
 		</header>
 
 		<!-- Messages -->
-		<div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); -webkit-overflow-scrolling: touch;">
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 relative z-0" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); -webkit-overflow-scrolling: touch;" on:click={closeAllSelectors}>
 			{#if loadingConversation}
 				<div class="h-full flex flex-col items-center justify-center text-center">
 					<div class="w-12 h-12 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mb-4"></div>
@@ -1048,8 +1080,8 @@
 		</div>
 
 		<!-- Input -->
-		<div class="flex-shrink-0 border-t border-themed-border p-4 overflow-visible" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
-			<div class="max-w-3xl mx-auto w-full">
+		<div class="flex-shrink-0 border-t border-themed-border p-4 overflow-visible relative z-30" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+			<div class="max-w-3xl mx-auto w-full relative">
 				<!-- Image Warning -->
 				{#if imageWarning}
 					<div class="mb-3 p-3 bg-yellow-600/20 border border-yellow-500/50 rounded-lg flex items-center justify-between">
@@ -1114,9 +1146,9 @@
 					</button>
 
 					<!-- Template Selector -->
-					<div class="relative flex-shrink-0 flex items-center gap-1">
+					<div class="relative z-[100] flex-shrink-0 flex items-center gap-1">
 						<button
-							on:click={() => showTemplateSelector = !showTemplateSelector}
+							on:click={() => showTemplateSelector ? closeAllSelectors() : openSelector('template')}
 							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {selectedTemplateId ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
 							<span class="text-base">📝</span>
@@ -1135,7 +1167,7 @@
 						{/if}
 
 						{#if showTemplateSelector}
-							<div class="fixed sm:absolute bottom-16 sm:bottom-full left-2 right-2 sm:left-0 sm:right-auto mb-0 sm:mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl z-[60] p-3 sm:min-w-[250px] max-w-[calc(100vw-1rem)]">
+							<div class="fixed sm:absolute bottom-16 sm:bottom-full left-2 right-2 sm:left-0 sm:right-auto mb-0 sm:mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl z-[200] p-3 sm:min-w-[250px] max-w-[calc(100vw-1rem)]">
 								<div class="flex items-center justify-between mb-2">
 									<p class="text-xs text-themed-text-muted">テンプレートを選択</p>
 									<button
@@ -1183,9 +1215,9 @@
 
 					{#if enableImageGen}
 						<!-- Image Model Selector -->
-						<div class="relative z-[55] flex-shrink-0">
+						<div class="relative z-[100] flex-shrink-0">
 							<button
-								on:click={() => showImageModelSelector = !showImageModelSelector}
+								on:click={() => showImageModelSelector ? closeAllSelectors() : openSelector('image')}
 								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
 							>
 								<span class="text-base">🖼️</span>
@@ -1196,7 +1228,7 @@
 							</button>
 
 							{#if showImageModelSelector}
-								<div class="fixed sm:absolute bottom-16 sm:bottom-full left-2 right-2 sm:left-0 sm:right-auto mb-0 sm:mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl z-[60] p-3 sm:min-w-[280px] max-w-[calc(100vw-1rem)]">
+								<div class="fixed sm:absolute bottom-16 sm:bottom-full left-2 right-2 sm:left-0 sm:right-auto mb-0 sm:mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl z-[200] p-3 sm:min-w-[280px] max-w-[calc(100vw-1rem)]">
 									<p class="text-xs text-themed-text-muted px-2 py-1 mb-2">画像生成モデルを選択</p>
 									<div class="space-y-1.5">
 										{#each imageModels as model}
@@ -1215,9 +1247,9 @@
 						</div>
 					{:else}
 						<!-- LLM Model Selector Button -->
-						<div class="relative z-[55] flex-shrink-0">
+						<div class="relative z-[100] flex-shrink-0">
 							<button
-								on:click={() => showModelSelector = !showModelSelector}
+								on:click={() => showModelSelector ? closeAllSelectors() : openSelector('model')}
 								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
 							>
 								<span class="text-base">{currentModel.icon}</span>
@@ -1229,7 +1261,7 @@
 							</button>
 
 							{#if showModelSelector}
-								<div class="fixed sm:absolute bottom-16 sm:bottom-full left-2 right-2 sm:left-0 sm:right-auto mb-0 sm:mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 sm:min-w-[420px] max-w-[calc(100vw-1rem)] z-[60] max-h-[60vh] overflow-y-auto">
+								<div class="fixed sm:absolute bottom-16 sm:bottom-full left-2 right-2 sm:left-0 sm:right-auto mb-0 sm:mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 sm:min-w-[420px] max-w-[calc(100vw-1rem)] z-[200] max-h-[60vh] overflow-y-auto">
 									<p class="text-xs text-themed-text-muted px-2 py-1 mb-2">モデルを選択</p>
 									<div class="space-y-1.5">
 										{#each getModels() as model}
