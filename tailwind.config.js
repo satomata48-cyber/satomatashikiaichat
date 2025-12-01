@@ -38,6 +38,7 @@ export default {
 					surface: 'rgb(var(--bg-surface) / <alpha-value>)',
 					elevated: 'rgb(var(--bg-elevated) / <alpha-value>)',
 					border: 'rgb(var(--border-color) / <alpha-value>)',
+					sidebar: 'rgb(var(--bg-surface))', // サイドバー用（透過なし）
 					text: 'rgb(var(--text-primary, 226 232 240) / <alpha-value>)',
 					'text-secondary': 'rgb(var(--text-secondary, 148 163 184) / <alpha-value>)',
 					'text-muted': 'rgb(var(--text-muted, 100 116 139) / <alpha-value>)'

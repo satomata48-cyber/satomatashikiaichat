@@ -856,7 +856,7 @@
 	{/if}
 
 	<!-- Sidebar -->
-	<div class="fixed md:relative w-64 h-full bg-themed-surface border-r border-themed-border flex flex-col z-50 transition-transform duration-300 flex-shrink-0 {sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0">
+	<div class="fixed md:relative w-64 h-full bg-themed-sidebar border-r border-themed-border flex flex-col z-50 transition-transform duration-300 flex-shrink-0 {sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0">
 		<div class="p-4 border-b border-themed-border">
 			<button on:click={newChat} class="btn-primary w-full flex items-center justify-center gap-2">
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
