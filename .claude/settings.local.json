@@ -30,7 +30,9 @@
       "WebFetch(domain:www.together.ai)",
       "WebFetch(domain:openrouter.ai)",
       "WebFetch(domain:api.together.ai)",
-      "WebFetch(domain:novita.ai)"
+      "WebFetch(domain:novita.ai)",
+      "WebFetch(domain:docs.tavily.com)",
+      "WebFetch(domain:tavily.com)"
     ],
     "deny": [],
     "ask": []

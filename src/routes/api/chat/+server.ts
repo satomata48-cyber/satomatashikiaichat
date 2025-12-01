@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
-import { searchWeb, chatWithAI, parseSSEStreamGenerator, parseSSEStreamWithReasoningGenerator, isReasoningModel } from '$lib/server/ai';
-import { createMessage, getMessagesByChat, createChat, getChatById, recordUsage } from '$lib/server/db';
+import { searchWeb, chatWithAI, parseSSEStreamGenerator, parseSSEStreamWithReasoningGenerator, parseSSEStreamWithCitationsGenerator, isReasoningModel, isSonarModel, searchWithSonar } from '$lib/server/ai';
+import { createMessage, getMessagesByChat, createChat, getChatById, recordUsage, incrementSearchUsage, getSearchUsage } from '$lib/server/db';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (!locals.user) {
@@ -22,7 +22,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const openrouterApiKey = env.OPENROUTER_API_KEY;
 	const tavilyApiKey = env.TAVILY_API_KEY;
 
-	const { message, conversationId, enableSearch, searchResultCount = 5, model, provider = 'together', systemPrompt, dateTime } = await request.json();
+	const { message, conversationId, enableSearch, searchResultCount = 10, enablePerplexity, perplexityMode = 'solo', perplexityModel = 'sonar', model, provider = 'together', systemPrompt, dateTime } = await request.json();
 
 	// Get the correct API key based on provider
 	const apiKey = provider === 'openrouter' ? openrouterApiKey : togetherApiKey;
@@ -72,11 +72,89 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		content: m.content
 	}));
 
-	// Search if enabled
-	let searchResults = undefined;
+	// Search if enabled (Tavily)
+	let searchResults: Awaited<ReturnType<typeof searchWeb>> | undefined = undefined;
+	let searchUsageRemaining: number | undefined = undefined;
+
 	if (enableSearch && tavilyApiKey) {
+		// 月間使用量をチェック
+		const usageResult = await incrementSearchUsage(platform.env.DB, locals.user.id);
+		if (!usageResult.success) {
+			return new Response(JSON.stringify({ error: '今月のWEB検索上限（1000回）に達しました。来月1日にリセットされます。' }), {
+				status: 429,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+		searchUsageRemaining = usageResult.remaining;
 		searchResults = await searchWeb(message, tavilyApiKey, searchResultCount);
 	}
+
+	// Perplexity mode: solo (Sonar handles everything) or withLLM (Sonar search + LLM answer)
+	if (enablePerplexity && openrouterApiKey) {
+		const sonarModelId = perplexityModel === 'sonar-reasoning' ? 'perplexity/sonar-reasoning' : 'perplexity/sonar';
+		if (perplexityMode === 'solo') {
+			// Sonar handles both search and answer - return directly
+			try {
+				const sonarResult = await searchWithSonar(message, openrouterApiKey, perplexityModel);
+
+				const responseStream = new ReadableStream({
+					async start(controller) {
+						const encoder = new TextEncoder();
+
+						// Send chat ID first
+						controller.enqueue(encoder.encode(`data: ${JSON.stringify({ conversationId: chatId })}\n\n`));
+
+						// Send Sonar's response as content
+						const mainContent = sonarResult.find(r => r.title === 'Sonar検索結果')?.content || '';
+						controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: mainContent })}\n\n`));
+
+						// Send citations as sources
+						const citations = sonarResult.filter(r => r.url).map(r => ({ title: r.title, url: r.url, content: '' }));
+						if (citations.length > 0) {
+							controller.enqueue(encoder.encode(`data: ${JSON.stringify({ sources: citations })}\n\n`));
+						}
+
+						// Save assistant message with correct model name
+						await createMessage(
+							platform.env.DB,
+							chatId,
+							'assistant',
+							mainContent,
+							citations.length > 0 ? JSON.stringify(citations) : undefined,
+							undefined,
+							sonarModelId
+						);
+
+						controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+						controller.close();
+					}
+				});
+
+				return new Response(responseStream, {
+					headers: {
+						'Content-Type': 'text/event-stream',
+						'Cache-Control': 'no-cache',
+						'Connection': 'keep-alive'
+					}
+				});
+			} catch (e) {
+				console.error('Perplexity solo error:', e);
+				return new Response(JSON.stringify({ error: `Perplexity error: ${e instanceof Error ? e.message : 'Unknown error'}` }), {
+					status: 500,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			}
+		} else {
+			// withLLM mode: Sonar search + pass to selected LLM
+			try {
+				searchResults = await searchWithSonar(message, openrouterApiKey, perplexityModel);
+			} catch (e) {
+				console.error('Perplexity search error:', e);
+			}
+		}
+	}
+
+	// Now pass search results to the selected LLM for answer generation
 
 	try {
 		// Get AI response stream
@@ -99,10 +177,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			});
 		}
 		const useReasoning = isReasoningModel(model);
+		const useSonar = isSonarModel(model);
 
 		// Collect full response for saving
 		let fullResponse = '';
 		let fullReasoning = '';
+		let sonarCitations: string[] = [];
 
 		const responseStream = new ReadableStream({
 			async start(controller) {
@@ -111,13 +191,30 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				// Send chat ID first
 				controller.enqueue(encoder.encode(`data: ${JSON.stringify({ conversationId: chatId })}\n\n`));
 
-				// Send search results if any
+				// Send search results if any (from Tavily)
 				if (searchResults && searchResults.length > 0) {
-					controller.enqueue(encoder.encode(`data: ${JSON.stringify({ sources: searchResults })}\n\n`));
+					controller.enqueue(encoder.encode(`data: ${JSON.stringify({ sources: searchResults, searchUsageRemaining })}\n\n`));
 				}
 
 				try {
-					if (useReasoning) {
+					if (useSonar) {
+						// Use Sonar-specific parser to extract citations
+						for await (const chunk of parseSSEStreamWithCitationsGenerator(aiStream)) {
+							if (chunk.type === 'content' && chunk.text) {
+								fullResponse += chunk.text;
+								controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: chunk.text })}\n\n`));
+							} else if (chunk.type === 'citations' && chunk.citations) {
+								sonarCitations = chunk.citations;
+								// Convert citations (URLs) to sources format
+								const citationSources = chunk.citations.map((url, i) => ({
+									title: `Source ${i + 1}`,
+									url: url,
+									content: ''
+								}));
+								controller.enqueue(encoder.encode(`data: ${JSON.stringify({ sources: citationSources })}\n\n`));
+							}
+						}
+					} else if (useReasoning) {
 						// Use reasoning-aware stream parser
 						for await (const chunk of parseSSEStreamWithReasoningGenerator(aiStream)) {
 							if (chunk.type === 'reasoning') {
@@ -138,12 +235,22 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 					// Save assistant message
 					if (fullResponse) {
+						// For Sonar models, save citations as sources
+						let sourcesToSave = searchResults ? JSON.stringify(searchResults) : undefined;
+						if (sonarCitations.length > 0) {
+							const citationSources = sonarCitations.map((url, i) => ({
+								title: `Source ${i + 1}`,
+								url: url,
+								content: ''
+							}));
+							sourcesToSave = JSON.stringify(citationSources);
+						}
 						await createMessage(
 							platform.env.DB,
 							chatId,
 							'assistant',
 							fullResponse,
-							searchResults ? JSON.stringify(searchResults) : undefined,
+							sourcesToSave,
 							fullReasoning || undefined,
 							model
 						);

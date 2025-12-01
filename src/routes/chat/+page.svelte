@@ -38,6 +38,7 @@
 		desc: string;
 		icon: string;
 		reasoning?: boolean;
+		webSearch?: boolean; // Web検索機能内蔵
 		longContext?: boolean; // 前の会話を参照可能（長いコンテキスト）
 		contextLength: string; // コンテキスト長
 		inputCost: number; // $/1M tokens (入力)
@@ -51,17 +52,25 @@
 	let textareaRef: HTMLTextAreaElement;
 	let loading = false;
 	let loadingConversation = false;
-	let enableSearch = false;
-	let searchResultCount: 5 | 10 = 5; // 検索結果の件数
+	let enableSearch = false; // Tavily Web検索
+	let searchUsageRemaining: number | null = null; // 月間残り検索回数
+	let enablePerplexity = false; // Perplexity検索
+	let perplexityMode: 'solo' | 'withLLM' = 'solo'; // 単体 or +LLM
+	let perplexityModel: 'sonar' | 'sonar-reasoning' = 'sonar'; // Perplexityモデル選択
 	let enableImageGen = false; // 画像生成モード
 	let enableDateTime = false; // 日時情報を追加
 	let sidebarOpen = false; // スマホではデフォルトで閉じる
 	let streamingContent = '';
 	let streamingReasoning = '';
 	let selectedProvider: Provider = 'openrouter';
-	let selectedModel = 'deepseek/deepseek-v3.2-exp';
+	let selectedModel: string | null = null; // モデル未選択状態
 	let showModelSelector = false;
 	let expandedReasoning: Set<string> = new Set();
+
+	// 検索セレクター
+	type SearchType = 'none' | 'tavily' | 'perplexity';
+	let selectedSearch: SearchType = 'none';
+	let showSearchSelector = false;
 
 	const togetherModels: ModelInfo[] = [
 		// 高速チャット
@@ -79,6 +88,7 @@
 		{ id: 'moonshotai/kimi-k2-thinking', name: 'Kimi K2', desc: '推論', icon: '🌙', reasoning: true, longContext: true, contextLength: '256K', inputCost: 0.45, outputCost: 2.35 },
 		{ id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', desc: '推論', icon: '🐋', reasoning: true, longContext: true, contextLength: '164K', inputCost: 0.30, outputCost: 1.20 },
 		{ id: 'qwen/qwen3-next-80b-a3b-thinking', name: 'Qwen3 80B Think', desc: '推論・格安', icon: '🔮', reasoning: true, longContext: true, contextLength: '262K', inputCost: 0.12, outputCost: 1.20 },
+		// Note: Perplexity Sonarは検索エンジンとしてのみ使用（LLMリストには含めない）
 	];
 
 	// 画像生成モデル
@@ -103,6 +113,7 @@
 	let showSettings = false;
 	let showHistory = false;
 	let usageHistory: { date: string; count: number }[] = [];
+	let modelStats: { model: string; count: number; has_sources: number }[] = [];
 
 	// テンプレート関連
 	interface PromptTemplate {
@@ -148,7 +159,7 @@
 	let selectedTheme = 'sky';
 	let showThemeSelector = false;
 	$: isLightTheme = colorThemes.find(t => t.id === selectedTheme)?.light ?? false;
-	$: currentModel = (selectedProvider === 'together' ? togetherModels : openrouterModels).find(m => m.id === selectedModel) || (selectedProvider === 'together' ? togetherModels : openrouterModels)[0];
+	$: currentModel = selectedModel ? (selectedProvider === 'together' ? togetherModels : openrouterModels).find(m => m.id === selectedModel) : null;
 
 	// 残高表示
 	let providerBalance: string | null = null;
@@ -184,16 +195,17 @@
 
 	function isReasoningModel(): boolean {
 		const model = getSelectedModel();
-		return model.reasoning === true;
+		return model?.reasoning === true;
 	}
 
 	function getModels(): ModelInfo[] {
 		return selectedProvider === 'together' ? togetherModels : openrouterModels;
 	}
 
-	function getSelectedModel(): ModelInfo {
+	function getSelectedModel(): ModelInfo | null {
+		if (!selectedModel) return null;
 		const models = getModels();
-		return models.find(m => m.id === selectedModel) || models[0];
+		return models.find(m => m.id === selectedModel) || null;
 	}
 
 	// モデルIDから表示情報を取得
@@ -227,9 +239,8 @@
 
 	function selectProvider(provider: Provider) {
 		selectedProvider = provider;
-		// Reset to first model of new provider
-		const models = provider === 'together' ? togetherModels : openrouterModels;
-		selectedModel = models[0].id;
+		// モデル選択をリセット
+		selectedModel = null;
 		showModelSelector = false;
 		// 残高を取得
 		loadProviderBalance(provider);
@@ -265,6 +276,7 @@
 			showTemplateSelector = false;
 			showImageModelSelector = false;
 			showThemeSelector = false;
+			showSearchSelector = false;
 		}
 	}
 
@@ -275,6 +287,7 @@
 			showModelSelector = false;
 			showImageModelSelector = false;
 			showThemeSelector = false;
+			showSearchSelector = false;
 		}
 	}
 
@@ -285,6 +298,7 @@
 			showModelSelector = false;
 			showTemplateSelector = false;
 			showThemeSelector = false;
+			showSearchSelector = false;
 		}
 	}
 
@@ -295,7 +309,25 @@
 			showModelSelector = false;
 			showTemplateSelector = false;
 			showImageModelSelector = false;
+			showSearchSelector = false;
 		}
+	}
+
+	// 検索セレクターをトグル
+	function toggleSearchSelector() {
+		showSearchSelector = !showSearchSelector;
+		if (showSearchSelector) {
+			showModelSelector = false;
+			showTemplateSelector = false;
+			showImageModelSelector = false;
+			showThemeSelector = false;
+		}
+	}
+
+	// 検索タイプを選択
+	function selectSearch(searchType: SearchType) {
+		selectedSearch = searchType;
+		showSearchSelector = false;
 	}
 
 	onMount(async () => {
@@ -309,7 +341,24 @@
 		await loadTemplates();
 		// 初期プロバイダーの残高を取得
 		loadProviderBalance(selectedProvider);
+		// WEB検索残り回数を取得
+		loadSearchUsage();
 	});
+
+	// WEB検索残り回数を取得
+	async function loadSearchUsage() {
+		try {
+			const res = await fetch('/api/stats');
+			if (res.ok) {
+				const data = await res.json();
+				if (data.searchUsage) {
+					searchUsageRemaining = data.searchUsage.remaining;
+				}
+			}
+		} catch (e) {
+			console.error('Failed to load search usage:', e);
+		}
+	}
 
 	// テンプレート関連の関数
 	async function loadTemplates() {
@@ -400,10 +449,18 @@
 		try {
 			const year = currentMonth.getFullYear();
 			const month = currentMonth.getMonth() + 1;
-			const res = await fetch(`/api/usage?year=${year}&month=${month}`);
-			if (res.ok) {
-				const data = await res.json();
+			// 使用履歴とモデル統計を並列で取得
+			const [usageRes, statsRes] = await Promise.all([
+				fetch(`/api/usage?year=${year}&month=${month}`),
+				fetch(`/api/stats?year=${year}&month=${month}`)
+			]);
+			if (usageRes.ok) {
+				const data = await usageRes.json();
 				usageHistory = data.usage || [];
+			}
+			if (statsRes.ok) {
+				const data = await statsRes.json();
+				modelStats = data.stats || [];
 			}
 		} catch (e) {
 			console.error('Failed to load usage history:', e);
@@ -500,12 +557,22 @@
 	async function sendMessage() {
 		if (!inputMessage.trim() || loading) return;
 
+		// モデル未選択チェック（画像生成モード以外）
+		if (!enableImageGen && !selectedModel) {
+			alert('モデルを選択してください');
+			return;
+		}
+
 		const userMessage = inputMessage.trim();
 		inputMessage = '';
 		resetTextarea();
 		loading = true;
 		streamingContent = '';
 		streamingReasoning = '';
+
+		// 検索設定をselectedSearchから設定
+		enableSearch = selectedSearch === 'tavily';
+		enablePerplexity = selectedSearch === 'perplexity';
 
 		// Add user message to UI
 		messages = [...messages, {
@@ -598,7 +665,9 @@
 					message: userMessage,
 					conversationId: currentConversationId,
 					enableSearch,
-					searchResultCount: enableSearch ? searchResultCount : undefined,
+					enablePerplexity,
+					perplexityMode: enablePerplexity ? perplexityMode : undefined,
+					perplexityModel: enablePerplexity ? perplexityModel : undefined,
 					model: selectedModel,
 					provider: selectedProvider,
 					systemPrompt: getSelectedTemplate()?.content || null,
@@ -645,6 +714,11 @@
 
 							if (data.sources) {
 								sources = data.sources;
+							}
+
+							// WEB検索残り回数を更新
+							if (data.searchUsageRemaining !== undefined) {
+								searchUsageRemaining = data.searchUsageRemaining;
 							}
 
 							if (data.reasoning) {
@@ -768,7 +842,7 @@
 	}
 </script>
 
-<div class="h-screen flex bg-themed-base overflow-hidden" style="height: 100vh; height: 100dvh; height: -webkit-fill-available;">
+<div class="fixed inset-0 flex bg-themed-base overflow-hidden">
 	<!-- Mobile Sidebar Overlay -->
 	{#if sidebarOpen}
 		<button
@@ -779,7 +853,7 @@
 	{/if}
 
 	<!-- Sidebar -->
-	<div class="fixed md:relative w-64 h-full bg-themed-surface border-r border-themed-border flex flex-col z-50 transition-transform duration-300 {sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0">
+	<div class="fixed md:relative w-64 h-full bg-themed-surface border-r border-themed-border flex flex-col z-50 transition-transform duration-300 flex-shrink-0 {sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0">
 		<div class="p-4 border-b border-themed-border">
 			<button on:click={newChat} class="btn-primary w-full flex items-center justify-center gap-2">
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -834,7 +908,7 @@
 	</div>
 
 	<!-- Main Content -->
-	<div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+	<div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
 		<!-- Header -->
 		<header class="h-14 flex-shrink-0 border-b border-themed-border flex items-center px-4 gap-2 sm:gap-4 overflow-visible relative z-50" style="padding-top: env(safe-area-inset-top);">
 			<button on:click={() => sidebarOpen = !sidebarOpen} class="md:hidden p-2 -ml-2 text-themed-text-secondary active:bg-themed-elevated rounded-lg" aria-label="Toggle sidebar">
@@ -945,7 +1019,7 @@
 		</header>
 
 		<!-- Messages -->
-		<div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 relative z-0" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); -webkit-overflow-scrolling: touch;">
+		<div class="flex-1 h-0 overflow-y-auto overflow-x-hidden p-4 relative z-0" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); -webkit-overflow-scrolling: touch;">
 			{#if loadingConversation}
 				<div class="h-full flex flex-col items-center justify-center text-center">
 					<div class="w-12 h-12 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mb-4"></div>
@@ -1015,21 +1089,27 @@
 										</a>
 									</div>
 								{/if}
-								{#if message.sources && message.sources.length > 0}
-									<div class="mt-2 space-y-1">
-										<p class="text-xs text-themed-text-muted">参考ソース:</p>
-										{#each message.sources as source}
-											<a href={source.url} target="_blank" rel="noopener" class="block text-xs text-primary-400 hover:underline truncate">
-												{source.title}
-											</a>
-										{/each}
-									</div>
-								{/if}
 								{#if message.role === 'assistant' && message.model}
 									{@const modelInfo = getModelDisplayInfo(message.model)}
 									<div class="mt-2 flex items-center gap-1 text-xs text-themed-text-muted">
 										<span>{modelInfo?.icon}</span>
 										<span>{modelInfo?.name}</span>
+									</div>
+								{/if}
+								{#if message.sources && message.sources.length > 0}
+									<div class="mt-2 pt-2 border-t border-themed-border/50">
+										<div class="flex items-center gap-1 text-xs text-green-400 mb-1">
+											<span>🔍</span>
+											<span class="font-medium">Tavily Web検索</span>
+											<span class="text-themed-text-muted">({message.sources.length}件)</span>
+										</div>
+										<div class="space-y-0.5">
+											{#each message.sources as source}
+												<a href={source.url} target="_blank" rel="noopener" class="block text-xs text-primary-400 hover:underline truncate">
+													{source.title}
+												</a>
+											{/each}
+										</div>
 									</div>
 								{/if}
 							</div>
@@ -1113,34 +1193,113 @@
 
 				<!-- Options Bar -->
 				<div class="flex items-center gap-2 mb-3 flex-wrap">
-					<!-- Web Search Toggle (一番左) -->
-					<div class="flex items-center flex-shrink-0">
+					<!-- 検索セレクター -->
+					<div class="relative flex-shrink-0">
 						<button
-							on:click={() => { enableSearch = !enableSearch; if (enableSearch) enableImageGen = false; }}
-							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {enableSearch ? 'bg-primary-600/20 border-primary-500/50 text-primary-400 rounded-r-none border-r-0' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+							on:click={toggleSearchSelector}
+							class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {selectedSearch !== 'none' ? 'bg-primary-600/20 border-primary-500/50 text-primary-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
 							<span class="text-base">🔍</span>
-							Web検索
-							{#if enableSearch}
-								<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-									<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-								</svg>
+							{#if selectedSearch === 'none'}
+								<span>検索OFF</span>
+							{:else if selectedSearch === 'tavily'}
+								<span>Tavily</span>
+								<span class="text-xs opacity-75">残{searchUsageRemaining !== null ? searchUsageRemaining : '---'}回</span>
+							{:else if selectedSearch === 'perplexity'}
+								<span>Perplexity</span>
 							{/if}
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+							</svg>
 						</button>
-						{#if enableSearch}
-							<div class="flex">
-								<button
-									on:click={() => searchResultCount = 5}
-									class="px-2 py-1.5 border border-primary-500/50 text-sm transition-colors {searchResultCount === 5 ? 'bg-primary-600 text-white' : 'bg-primary-600/20 text-primary-400 hover:bg-primary-600/30'}"
-								>
-									5件
-								</button>
-								<button
-									on:click={() => searchResultCount = 10}
-									class="px-2 py-1.5 rounded-r-lg border border-l-0 border-primary-500/50 text-sm transition-colors {searchResultCount === 10 ? 'bg-primary-600 text-white' : 'bg-primary-600/20 text-primary-400 hover:bg-primary-600/30'}"
-								>
-									10件
-								</button>
+
+						<!-- 検索オプションポップアップ -->
+						{#if showSearchSelector}
+							<div class="absolute bottom-full left-0 mb-2 w-80 bg-themed-surface border border-themed-border rounded-xl shadow-xl z-50 overflow-hidden">
+								<div class="p-3 border-b border-themed-border">
+									<h4 class="font-semibold text-themed-text text-sm">Web検索エンジン選択</h4>
+								</div>
+								<div class="p-2 space-y-1 max-h-80 overflow-y-auto">
+									<!-- 検索OFF -->
+									<button
+										on:click={() => selectSearch('none')}
+										class="group/search flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors {selectedSearch === 'none' ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-surface text-themed-text-secondary hover:bg-themed-border/50'}"
+									>
+										<span class="text-xl">❌</span>
+										<div class="flex-1 text-left">
+											<div class="font-medium">検索OFF</div>
+											<div class="text-xs opacity-75">Web検索を使用しない</div>
+										</div>
+										{#if selectedSearch === 'none'}
+											<svg class="w-4 h-4 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+											</svg>
+										{/if}
+									</button>
+
+									<!-- Tavily -->
+									<button
+										on:click={() => selectSearch('tavily')}
+										class="group/search flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors {selectedSearch === 'tavily' ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-surface text-themed-text-secondary hover:bg-themed-border/50'}"
+									>
+										<span class="text-xl">🔍</span>
+										<div class="flex-1 text-left">
+											<div class="font-medium">Tavily検索</div>
+											<div class="text-xs opacity-75">AI専用Web検索エンジン。最新情報を10件取得してLLMに渡します</div>
+											<div class="text-xs text-amber-400 mt-0.5">月1000回まで（残{searchUsageRemaining !== null ? searchUsageRemaining : '---'}回）</div>
+										</div>
+										{#if selectedSearch === 'tavily'}
+											<svg class="w-4 h-4 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+											</svg>
+										{/if}
+									</button>
+
+									<!-- Perplexity -->
+									<button
+										on:click={() => selectSearch('perplexity')}
+										class="group/search flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors {selectedSearch === 'perplexity' ? 'bg-green-600/20 border border-green-500/50 text-green-400' : 'bg-themed-surface text-themed-text-secondary hover:bg-themed-border/50'}"
+									>
+										<span class="text-xl">🔎</span>
+										<div class="flex-1 text-left">
+											<div class="font-medium">Perplexity検索</div>
+											<div class="text-xs opacity-75">AI検索に特化した専用LLM。Webを検索して直接回答を生成</div>
+											<div class="text-xs text-green-400 mt-0.5">回数制限なし（従量課金 $1/$1〜$5）</div>
+										</div>
+										{#if selectedSearch === 'perplexity'}
+											<svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+											</svg>
+										{/if}
+									</button>
+								</div>
+
+								<!-- Perplexityオプション -->
+								{#if selectedSearch === 'perplexity'}
+									<div class="p-3 border-t border-themed-border bg-themed-elevated/50">
+										<div class="text-xs text-themed-text-muted mb-2">Perplexityオプション</div>
+										<div class="flex gap-2 flex-wrap">
+											<button
+												on:click={() => perplexityModel = 'sonar'}
+												class="flex items-center gap-1 px-2 py-1 rounded border text-xs transition-colors {perplexityModel === 'sonar' ? 'bg-green-600 text-white border-green-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+											>
+												sonar <span class="opacity-75">$1/$1</span>
+											</button>
+											<button
+												on:click={() => perplexityModel = 'sonar-reasoning'}
+												class="flex items-center gap-1 px-2 py-1 rounded border text-xs transition-colors {perplexityModel === 'sonar-reasoning' ? 'bg-purple-600 text-white border-purple-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+											>
+												推論 <span class="opacity-75">$1/$5</span>
+											</button>
+											<button
+												on:click={() => perplexityMode = perplexityMode === 'withLLM' ? 'solo' : 'withLLM'}
+												class="flex items-center gap-1 px-2 py-1 rounded border text-xs transition-colors {perplexityMode === 'withLLM' ? 'bg-amber-600 text-white border-amber-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+											>
+												+LLM {perplexityMode === 'withLLM' ? '✓' : ''}
+											</button>
+										</div>
+									</div>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -1264,14 +1423,25 @@
 						<div class="relative flex-shrink-0">
 							<button
 								on:click={() => showModelSelector = !showModelSelector}
-								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
+								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {currentModel ? 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text' : 'bg-amber-600/20 border-amber-500/50 text-amber-400 hover:bg-amber-600/30'}"
 							>
-								<span class="text-base">{currentModel.icon}</span>
-								<span class="hidden sm:inline">{currentModel.name}</span>
-								<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{currentModel.contextLength}</span>
-								{#if currentModel.reasoning}
-									<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
+								{#if currentModel}
+									<span class="text-base">{currentModel.icon}</span>
+									<span class="hidden sm:inline">{currentModel.name}</span>
+									<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{currentModel.contextLength}</span>
+									{#if currentModel.webSearch}
+										<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded font-bold">検索</span>
+									{/if}
+									{#if currentModel.reasoning}
+										<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
+									{/if}
+								{:else}
+									<span class="text-base">🤖</span>
+									<span>AIchatモデル選択</span>
 								{/if}
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+								</svg>
 							</button>
 
 							{#if showModelSelector}
@@ -1286,6 +1456,9 @@
 												<span class="text-base">{model.icon}</span>
 												<span class="flex-1 text-left truncate">{model.name}</span>
 												<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded flex-shrink-0">{model.contextLength}</span>
+												{#if model.webSearch}
+													<span class="px-1 py-0.5 text-xs bg-green-600/30 text-green-400 rounded flex-shrink-0 font-bold">検索</span>
+												{/if}
 												{#if model.reasoning}
 													<span class="px-1 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded flex-shrink-0">推論</span>
 												{/if}
@@ -1405,6 +1578,9 @@
 							>
 								<span class="text-base">{model.icon}</span>
 								<span class="flex-1 text-left">{model.name}</span>
+								{#if model.webSearch}
+									<span class="px-1 py-0.5 text-xs bg-green-600/30 text-green-400 rounded font-bold">検索</span>
+								{/if}
 								<span class="text-xs text-themed-text-secondary">{model.desc}</span>
 							</button>
 						{/each}
@@ -1553,12 +1729,75 @@
 					</div>
 
 					<!-- Summary -->
-					<div class="mt-4 pt-4 border-t border-themed-border">
-						<div class="flex justify-between text-sm">
-							<span class="text-themed-text-secondary">今月の合計</span>
-							<span class="text-white font-medium">{usageHistory.reduce((sum, u) => sum + u.count, 0)}回</span>
+					{#if true}
+						{@const totalUsage = usageHistory.reduce((sum, u) => sum + u.count, 0)}
+						{@const daysWithUsage = usageHistory.filter(u => u.count > 0).length}
+						{@const dailyAvg = daysWithUsage > 0 ? (totalUsage / daysWithUsage).toFixed(1) : 0}
+						<div class="mt-4 pt-4 border-t border-themed-border">
+							<div class="flex justify-between text-sm mb-2">
+								<span class="text-themed-text-secondary">今月の合計</span>
+								<span class="text-white font-medium">{totalUsage}回</span>
+							</div>
+							<div class="flex justify-between text-sm">
+								<span class="text-themed-text-secondary">1日平均（使用日）</span>
+								<span class="text-amber-400 font-medium">{dailyAvg}回/日</span>
+							</div>
 						</div>
-					</div>
+					{/if}
+
+					<!-- Model Usage Stats -->
+					{#if modelStats.length > 0}
+						{@const totalMessages = modelStats.reduce((sum, s) => sum + s.count, 0)}
+						{@const totalSearches = modelStats.reduce((sum, s) => sum + s.has_sources, 0)}
+						{@const estimatedCost = modelStats.reduce((sum, s) => {
+							const costs: Record<string, { input: number; output: number }> = {
+								'deepseek-v3.2-exp': { input: 0.216, output: 0.328 },
+								'deepseek-r1': { input: 0.30, output: 1.20 },
+								'grok-4.1-fast:free': { input: 0, output: 0 },
+								'gemini-2.5-flash-preview': { input: 0.30, output: 2.50 },
+								'kimi-k2-thinking': { input: 0.45, output: 2.35 },
+								'qwen3-next-80b-a3b-thinking': { input: 0.12, output: 1.20 },
+								'sonar': { input: 1, output: 1 },
+								'sonar-reasoning': { input: 1, output: 5 },
+							};
+							const modelKey = s.model?.split('/').pop()?.toLowerCase() || '';
+							const cost = Object.entries(costs).find(([k]) => modelKey.includes(k))?.[1] || { input: 0.5, output: 1 };
+							return sum + s.count * (cost.input * 0.5 / 1000 + cost.output * 1 / 1000);
+						}, 0)}
+						<div class="mt-4 pt-4 border-t border-themed-border">
+							<h4 class="text-sm font-medium text-themed-text-secondary mb-3">モデル使用統計</h4>
+
+							<!-- Graph -->
+							<div class="space-y-2 mb-4">
+								{#each modelStats as stat}
+									{@const percentage = totalMessages > 0 ? (stat.count / totalMessages) * 100 : 0}
+									{@const modelName = stat.model?.split('/').pop() || '不明'}
+									<div class="flex items-center gap-2">
+										<span class="text-xs text-themed-text-secondary w-24 truncate" title={stat.model}>{modelName}</span>
+										<div class="flex-1 h-4 bg-themed-elevated rounded-full overflow-hidden">
+											<div
+												class="h-full bg-gradient-to-r from-primary-600 to-primary-400 rounded-full transition-all"
+												style="width: {percentage}%"
+											></div>
+										</div>
+										<span class="text-xs text-white font-medium w-12 text-right">{stat.count}回</span>
+									</div>
+								{/each}
+							</div>
+
+							<!-- Web検索使用回数 -->
+							<div class="flex justify-between text-sm pt-2 border-t border-themed-border/50">
+								<span class="text-themed-text-secondary">Web検索使用</span>
+								<span class="text-green-400 font-medium">{totalSearches}回</span>
+							</div>
+
+							<!-- 概算コスト -->
+							<div class="flex justify-between text-sm mt-2">
+								<span class="text-themed-text-secondary">概算コスト</span>
+								<span class="text-amber-400 font-medium">${estimatedCost.toFixed(3)}</span>
+							</div>
+						</div>
+					{/if}
 				{/if}
 			</div>
 

@@ -10,7 +10,7 @@ export interface SearchResult {
 }
 
 // Tavily Search
-export async function searchWeb(query: string, apiKey: string, maxResults: number = 5): Promise<SearchResult[]> {
+export async function searchWeb(query: string, apiKey: string, maxResults: number = 10): Promise<SearchResult[]> {
 	try {
 		const response = await fetch('https://api.tavily.com/search', {
 			method: 'POST',
@@ -314,6 +314,143 @@ export function isReasoningModel(model: string): boolean {
 		'Qwen/Qwen3-Next-80B-A3B-Thinking',
 		'qwen/qwen3-next-80b-a3b-thinking',
 		'qwen/qwq-32b',
+		'google/gemini-2.5-flash-preview',
 	];
 	return reasoningModels.some(m => model.toLowerCase().includes(m.toLowerCase().split('/').pop() || ''));
+}
+
+// Check if model is Perplexity Sonar (has built-in web search with citations)
+export function isSonarModel(model: string): boolean {
+	return model.toLowerCase().includes('perplexity/sonar');
+}
+
+// Sonar search - uses Sonar to search and returns SearchResult format
+// This allows the search results to be passed to another LLM for final answer generation
+export async function searchWithSonar(
+	query: string,
+	apiKey: string,
+	perplexityModel: 'sonar' | 'sonar-reasoning' = 'sonar'
+): Promise<SearchResult[]> {
+	const modelId = perplexityModel === 'sonar-reasoning' ? 'perplexity/sonar-reasoning' : 'perplexity/sonar';
+	const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+		method: 'POST',
+		headers: {
+			'Authorization': `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
+			'HTTP-Referer': 'https://satomatashikiaichat.pages.dev',
+			'X-Title': 'Satomata AI Chat'
+		},
+		body: JSON.stringify({
+			model: modelId,
+			messages: [
+				{ role: 'system', content: '質問に対して検索結果を元に詳細に回答してください。情報源を明確にしてください。' },
+				{ role: 'user', content: query }
+			],
+			max_tokens: 2048,
+			temperature: 0.3
+		})
+	});
+
+	if (!response.ok) {
+		const error = await response.text();
+		throw new Error(`Sonar search error: ${response.status} - ${error}`);
+	}
+
+	const data = await response.json() as {
+		choices: Array<{ message: { content: string } }>;
+		citations?: string[];
+	};
+
+	const content = data.choices?.[0]?.message?.content || '';
+	const citations = data.citations || [];
+
+	// Convert to SearchResult format
+	// The content from Sonar becomes the search result, citations become sources
+	const results: SearchResult[] = [];
+
+	// Add main content as first result
+	if (content) {
+		results.push({
+			title: 'Sonar検索結果',
+			url: '',
+			content: content
+		});
+	}
+
+	// Add citations as additional results
+	citations.forEach((url, i) => {
+		results.push({
+			title: `参考ソース ${i + 1}`,
+			url: url,
+			content: ''
+		});
+	});
+
+	return results;
+}
+
+// Stream chunk with citations support
+export interface StreamChunkWithCitations {
+	type: 'content' | 'reasoning' | 'citations';
+	text?: string;
+	citations?: string[];
+}
+
+// Parse SSE stream for Sonar models (extracts citations)
+export async function* parseSSEStreamWithCitationsGenerator(stream: ReadableStream<Uint8Array>): AsyncGenerator<StreamChunkWithCitations> {
+	const reader = stream.getReader();
+	const decoder = new TextDecoder();
+	let buffer = '';
+	let collectedCitations: string[] = [];
+
+	try {
+		while (true) {
+			const { done, value } = await reader.read();
+
+			if (done) {
+				break;
+			}
+
+			buffer += decoder.decode(value, { stream: true });
+			const lines = buffer.split('\n');
+			buffer = lines.pop() || '';
+
+			for (const line of lines) {
+				if (line.startsWith('data: ')) {
+					const data = line.slice(6).trim();
+					if (data === '[DONE]') {
+						// Yield collected citations at the end
+						if (collectedCitations.length > 0) {
+							yield { type: 'citations', citations: collectedCitations };
+						}
+						return;
+					}
+					if (data) {
+						try {
+							const json = JSON.parse(data);
+
+							// Check for citations in the response
+							if (json.citations && Array.isArray(json.citations)) {
+								collectedCitations = json.citations;
+							}
+
+							const content = json.choices?.[0]?.delta?.content;
+							if (content) {
+								yield { type: 'content', text: content };
+							}
+						} catch {
+							// Skip invalid JSON
+						}
+					}
+				}
+			}
+		}
+
+		// Yield citations if we have them (in case [DONE] wasn't received)
+		if (collectedCitations.length > 0) {
+			yield { type: 'citations', citations: collectedCitations };
+		}
+	} finally {
+		reader.releaseLock();
+	}
 }

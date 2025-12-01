@@ -194,13 +194,21 @@ export interface UsageHistory {
 	updated_at: string;
 }
 
+// 日本時間の日付を取得するヘルパー関数
+function getJapanDateString(): string {
+	const now = new Date();
+	// 日本時間（UTC+9）に変換
+	const japanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+	return japanTime.toISOString().split('T')[0]; // YYYY-MM-DD
+}
+
 // 使用履歴を記録（UPSERT: 同じ日付なら更新、なければ挿入）
 export async function recordUsage(
 	db: D1Database,
 	userId: string,
 	type: 'message' | 'image'
 ): Promise<void> {
-	const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+	const today = getJapanDateString(); // 日本時間の日付を使用
 	const id = crypto.randomUUID();
 
 	if (type === 'message') {
@@ -322,4 +330,124 @@ export async function deletePromptTemplate(
 		.prepare('DELETE FROM prompt_templates WHERE id = ? AND user_id = ?')
 		.bind(id, userId)
 		.run();
+}
+
+// WEB検索使用量
+export interface SearchUsage {
+	id: string;
+	user_id: string;
+	year_month: string;
+	usage_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+// 日本時間の年月を取得（YYYY-MM形式）
+function getJapanYearMonth(): string {
+	const now = new Date();
+	const japanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+	const year = japanTime.getFullYear();
+	const month = String(japanTime.getMonth() + 1).padStart(2, '0');
+	return `${year}-${month}`;
+}
+
+// 月間WEB検索使用量を取得
+export async function getSearchUsage(
+	db: D1Database,
+	userId: string
+): Promise<{ used: number; remaining: number; limit: number }> {
+	const yearMonth = getJapanYearMonth();
+	const limit = 1000;
+
+	const result = await db
+		.prepare('SELECT usage_count FROM search_usage WHERE user_id = ? AND year_month = ?')
+		.bind(userId, yearMonth)
+		.first<{ usage_count: number }>();
+
+	const used = result?.usage_count || 0;
+	return { used, remaining: Math.max(0, limit - used), limit };
+}
+
+// WEB検索使用量を増加
+export async function incrementSearchUsage(
+	db: D1Database,
+	userId: string
+): Promise<{ success: boolean; remaining: number }> {
+	const yearMonth = getJapanYearMonth();
+	const limit = 1000;
+	const id = crypto.randomUUID();
+
+	// まず現在の使用量を確認
+	const current = await db
+		.prepare('SELECT usage_count FROM search_usage WHERE user_id = ? AND year_month = ?')
+		.bind(userId, yearMonth)
+		.first<{ usage_count: number }>();
+
+	const currentCount = current?.usage_count || 0;
+
+	// 上限チェック
+	if (currentCount >= limit) {
+		return { success: false, remaining: 0 };
+	}
+
+	// UPSERT: 存在すれば更新、なければ挿入
+	await db
+		.prepare(`
+			INSERT INTO search_usage (id, user_id, year_month, usage_count)
+			VALUES (?, ?, ?, 1)
+			ON CONFLICT(user_id, year_month) DO UPDATE SET
+				usage_count = usage_count + 1,
+				updated_at = CURRENT_TIMESTAMP
+		`)
+		.bind(id, userId, yearMonth)
+		.run();
+
+	return { success: true, remaining: limit - currentCount - 1 };
+}
+
+// Model usage statistics
+export interface ModelUsageStat {
+	model: string;
+	count: number;
+	has_sources: number; // Web検索使用回数
+}
+
+// 月別モデル使用統計を取得
+export async function getModelUsageStats(
+	db: D1Database,
+	userId: string,
+	year: number,
+	month: number
+): Promise<ModelUsageStat[]> {
+	const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+	const endDate = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`;
+
+	// Get user's chat IDs first
+	const chatsResult = await db
+		.prepare('SELECT id FROM chats WHERE user_id = ?')
+		.bind(userId)
+		.all<{ id: string }>();
+
+	const chatIds = chatsResult.results?.map(c => c.id) || [];
+	if (chatIds.length === 0) return [];
+
+	// Get model usage stats for the month
+	const result = await db
+		.prepare(`
+			SELECT
+				COALESCE(model, '不明') as model,
+				COUNT(*) as count,
+				SUM(CASE WHEN sources IS NOT NULL AND sources != '' THEN 1 ELSE 0 END) as has_sources
+			FROM messages
+			WHERE chat_id IN (SELECT id FROM chats WHERE user_id = ?)
+				AND role = 'assistant'
+				AND date(created_at) >= date(?)
+				AND date(created_at) <= date(?)
+			GROUP BY model
+			ORDER BY count DESC
+		`)
+		.bind(userId, startDate, endDate)
+		.all<ModelUsageStat>();
+
+	return result.results || [];
 }
