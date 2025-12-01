@@ -1294,8 +1294,9 @@
 											<button
 												on:click={() => perplexityMode = perplexityMode === 'withLLM' ? 'solo' : 'withLLM'}
 												class="flex items-center gap-1 px-2 py-1 rounded border text-xs transition-colors {perplexityMode === 'withLLM' ? 'bg-amber-600 text-white border-amber-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+												title="検索結果を選択したAIモデルで詳しく分析・回答"
 											>
-												+LLM {perplexityMode === 'withLLM' ? '✓' : ''}
+												🤖 AIchatで分析 {perplexityMode === 'withLLM' ? '✓' : ''}
 											</button>
 										</div>
 									</div>
@@ -1368,85 +1369,74 @@
 						{/if}
 					</div>
 
-					<!-- Mode Selector: Text / Image -->
-					<div class="flex items-center gap-1 p-1 bg-themed-elevated rounded-lg flex-shrink-0">
+					<!-- AI Model Selector (Text + Image combined) -->
+					<div class="relative flex-shrink-0">
 						<button
-							on:click={() => { enableImageGen = false; }}
-							class="flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors {!enableImageGen ? 'bg-primary-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
+							on:click={() => showModelSelector = !showModelSelector}
+							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {enableImageGen ? 'bg-pink-600/20 border-pink-500/50 text-pink-400' : currentModel ? 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text' : 'bg-amber-600/20 border-amber-500/50 text-amber-400 hover:bg-amber-600/30'}"
 						>
-							<span class="text-sm">💬</span>
-							<span class="hidden sm:inline">テキスト</span>
-						</button>
-						<button
-							on:click={() => { enableImageGen = true; enableSearch = false; }}
-							class="flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors {enableImageGen ? 'bg-pink-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
-						>
-							<span class="text-sm">🎨</span>
-							<span class="hidden sm:inline">画像</span>
-						</button>
-					</div>
-
-					{#if enableImageGen}
-						<!-- Image Model Selector -->
-						<div class="relative z-[100] flex-shrink-0">
-							<button
-								on:click={toggleImageModelSelector}
-								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text"
-							>
-								<span class="text-base">🖼️</span>
+							{#if enableImageGen}
+								<span class="text-base">🎨</span>
 								<span class="hidden sm:inline">{imageModels.find(m => m.id === selectedImageModel)?.name || 'FLUX.1'}</span>
 								<span class="px-1.5 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded">
 									{imageModels.find(m => m.id === selectedImageModel)?.cost || '無料'}
 								</span>
-							</button>
+							{:else if currentModel}
+								<span class="text-base">{currentModel.icon}</span>
+								<span class="hidden sm:inline">{currentModel.name}</span>
+								<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{currentModel.contextLength}</span>
+								{#if currentModel.webSearch}
+									<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded font-bold">検索</span>
+								{/if}
+								{#if currentModel.reasoning}
+									<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
+								{/if}
+							{:else}
+								<span class="text-base">🤖</span>
+								<span>AIchatモデル選択</span>
+							{/if}
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+							</svg>
+						</button>
 
-							{#if showImageModelSelector}
-								<div class="fixed sm:absolute bottom-16 sm:bottom-full left-2 right-2 sm:left-0 sm:right-auto mb-0 sm:mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl z-[200] p-3 sm:min-w-[280px] max-w-[calc(100vw-1rem)]">
+						{#if showModelSelector}
+							<div class="absolute left-0 bottom-full mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 min-w-[420px] max-h-[60vh] overflow-y-auto z-[9999]">
+								<!-- モードタブ -->
+								<div class="flex items-center gap-1 p-1 bg-themed-surface rounded-lg mb-3">
+									<button
+										on:click={() => { enableImageGen = false; }}
+										class="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors {!enableImageGen ? 'bg-primary-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
+									>
+										<span>💬</span> テキスト生成
+									</button>
+									<button
+										on:click={() => { enableImageGen = true; selectedSearch = 'none'; }}
+										class="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors {enableImageGen ? 'bg-pink-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
+									>
+										<span>🎨</span> 画像生成
+									</button>
+								</div>
+
+								{#if enableImageGen}
+									<!-- 画像生成モデル -->
 									<p class="text-xs text-themed-text-muted px-2 py-1 mb-2">画像生成モデルを選択</p>
 									<div class="space-y-1.5">
 										{#each imageModels as model}
 											<button
-												on:click={() => { selectedImageModel = model.id; showImageModelSelector = false; }}
+												on:click={() => { selectedImageModel = model.id; showModelSelector = false; }}
 												class="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-colors {selectedImageModel === model.id ? 'bg-pink-600/20 border border-pink-500/50 text-pink-400' : 'bg-themed-surface text-themed-text-secondary hover:bg-themed-border/50'}"
 											>
+												<span class="text-base">🖼️</span>
 												<span class="flex-1 text-left truncate">{model.name}</span>
 												<span class="text-xs text-themed-text-secondary flex-shrink-0">{model.desc}</span>
 												<span class="px-1.5 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded flex-shrink-0">{model.cost}</span>
 											</button>
 										{/each}
 									</div>
-								</div>
-							{/if}
-						</div>
-					{:else}
-						<!-- LLM Model Selector Button -->
-						<div class="relative flex-shrink-0">
-							<button
-								on:click={() => showModelSelector = !showModelSelector}
-								class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {currentModel ? 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text' : 'bg-amber-600/20 border-amber-500/50 text-amber-400 hover:bg-amber-600/30'}"
-							>
-								{#if currentModel}
-									<span class="text-base">{currentModel.icon}</span>
-									<span class="hidden sm:inline">{currentModel.name}</span>
-									<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{currentModel.contextLength}</span>
-									{#if currentModel.webSearch}
-										<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded font-bold">検索</span>
-									{/if}
-									{#if currentModel.reasoning}
-										<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
-									{/if}
 								{:else}
-									<span class="text-base">🤖</span>
-									<span>AIchatモデル選択</span>
-								{/if}
-								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-								</svg>
-							</button>
-
-							{#if showModelSelector}
-								<div class="absolute left-0 bottom-full mb-2 bg-themed-elevated border border-themed-border rounded-xl shadow-xl p-3 min-w-[420px] max-h-[60vh] overflow-y-auto z-[9999]">
-									<p class="text-xs text-themed-text-muted px-2 py-1 mb-2">モデルを選択</p>
+									<!-- テキスト生成モデル -->
+									<p class="text-xs text-themed-text-muted px-2 py-1 mb-2">テキスト生成モデルを選択</p>
 									<div class="space-y-1.5">
 										{#each getModels() as model}
 											<button
@@ -1468,10 +1458,10 @@
 										{/each}
 									</div>
 									<p class="text-xs text-themed-text-muted mt-2 px-2 hidden sm:block">※料金は入力/出力、回数は1000円/月の目安</p>
-								</div>
-							{/if}
-						</div>
-					{/if}
+								{/if}
+							</div>
+						{/if}
+					</div>
 				</div>
 
 				<!-- Input Field -->
