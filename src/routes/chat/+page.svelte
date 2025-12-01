@@ -1195,23 +1195,24 @@
 				{/if}
 
 				<!-- Options Bar -->
-				<div class="flex items-center gap-2 mb-3 flex-wrap">
+				<div class="flex items-center gap-1 sm:gap-2 mb-3 overflow-x-auto">
 					<!-- 検索セレクター -->
 					<div class="relative flex-shrink-0">
 						<button
 							on:click={toggleSearchSelector}
-							class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors {selectedSearch !== 'none' ? 'bg-primary-600/20 border-primary-500/50 text-primary-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+							class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg border text-xs sm:text-sm transition-colors {selectedSearch !== 'none' ? 'bg-primary-600/20 border-primary-500/50 text-primary-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
-							<span class="text-base">🔍</span>
+							<span class="text-sm sm:text-base">🔍</span>
 							{#if selectedSearch === 'none'}
-								<span>検索OFF</span>
+								<span class="hidden sm:inline">検索OFF</span>
 							{:else if selectedSearch === 'tavily'}
 								<span>Tavily</span>
-								<span class="text-xs opacity-75">残{searchUsageRemaining !== null ? searchUsageRemaining : '---'}回</span>
+								<span class="hidden sm:inline text-xs opacity-75">残{searchUsageRemaining !== null ? searchUsageRemaining : '---'}回</span>
 							{:else if selectedSearch === 'perplexity'}
-								<span>Perplexity</span>
+								<span class="hidden sm:inline">Perplexity</span>
+								<span class="sm:hidden">Pplx</span>
 							{/if}
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 							</svg>
 						</button>
@@ -1311,9 +1312,9 @@
 					<!-- DateTime Toggle -->
 					<button
 						on:click={() => enableDateTime = !enableDateTime}
-						class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap flex-shrink-0 {enableDateTime ? 'bg-amber-600/20 border-amber-500/50 text-amber-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+						class="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg border text-xs sm:text-sm transition-colors whitespace-nowrap flex-shrink-0 {enableDateTime ? 'bg-amber-600/20 border-amber-500/50 text-amber-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 					>
-						<span class="text-base">🕐</span>
+						<span class="text-sm sm:text-base">🕐</span>
 						<span class="hidden sm:inline">日時</span>
 						{#if enableDateTime}
 							<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -1323,12 +1324,12 @@
 					</button>
 
 					<!-- Template Selector -->
-					<div class="relative flex-shrink-0 flex items-center gap-1">
+					<div class="relative flex-shrink-0 flex items-center gap-0.5 sm:gap-1">
 						<button
 							on:click={() => showTemplateSelector = !showTemplateSelector}
-							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {selectedTemplateId ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+							class="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg border text-xs sm:text-sm transition-colors whitespace-nowrap {selectedTemplateId ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' : 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
 						>
-							<span class="text-base">📝</span>
+							<span class="text-sm sm:text-base">📝</span>
 							<span class="hidden sm:inline">{selectedTemplateId ? getSelectedTemplate()?.name || 'テンプレート' : 'テンプレート'}</span>
 						</button>
 						{#if selectedTemplateId}
@@ -1376,29 +1377,30 @@
 					<div class="relative flex-shrink-0">
 						<button
 							on:click={() => showModelSelector = !showModelSelector}
-							class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm transition-colors whitespace-nowrap {enableImageGen ? 'bg-pink-600/20 border-pink-500/50 text-pink-400' : currentModel ? 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text' : 'bg-amber-600/20 border-amber-500/50 text-amber-400 hover:bg-amber-600/30'}"
+							class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg border text-xs sm:text-sm transition-colors whitespace-nowrap {enableImageGen ? 'bg-pink-600/20 border-pink-500/50 text-pink-400' : currentModel ? 'bg-themed-elevated border-themed-border text-themed-text-secondary hover:bg-themed-elevated hover:text-themed-text' : 'bg-amber-600/20 border-amber-500/50 text-amber-400 hover:bg-amber-600/30'}"
 						>
 							{#if enableImageGen}
-								<span class="text-base">🎨</span>
+								<span class="text-sm sm:text-base">🎨</span>
 								<span class="hidden sm:inline">{imageModels.find(m => m.id === selectedImageModel)?.name || 'FLUX.1'}</span>
-								<span class="px-1.5 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded">
+								<span class="px-1 sm:px-1.5 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded">
 									{imageModels.find(m => m.id === selectedImageModel)?.cost || '無料'}
 								</span>
 							{:else if currentModel}
-								<span class="text-base">{currentModel.icon}</span>
+								<span class="text-sm sm:text-base">{currentModel.icon}</span>
 								<span class="hidden sm:inline">{currentModel.name}</span>
-								<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{currentModel.contextLength}</span>
+								<span class="hidden sm:inline px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{currentModel.contextLength}</span>
 								{#if currentModel.webSearch}
-									<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded font-bold">検索</span>
+									<span class="hidden sm:inline px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded font-bold">検索</span>
 								{/if}
 								{#if currentModel.reasoning}
-									<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
+									<span class="hidden sm:inline px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
 								{/if}
 							{:else}
-								<span class="text-base">🤖</span>
-								<span>AIchatモデル選択</span>
+								<span class="text-sm sm:text-base">🤖</span>
+								<span class="hidden sm:inline">AIchatモデル選択</span>
+								<span class="sm:hidden">モデル</span>
 							{/if}
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 							</svg>
 						</button>
