@@ -557,8 +557,15 @@
 	async function sendMessage() {
 		if (!inputMessage.trim() || loading) return;
 
-		// モデル未選択チェック（画像生成モード以外）
-		if (!enableImageGen && !selectedModel) {
+		// 検索設定をselectedSearchから設定（チェック前に設定）
+		enableSearch = selectedSearch === 'tavily';
+		enablePerplexity = selectedSearch === 'perplexity';
+
+		// Perplexity単体モード（AIchatで分析OFF）の場合はモデル不要
+		const isPerplexitySolo = enablePerplexity && perplexityMode === 'solo';
+
+		// モデル未選択チェック（画像生成モード、Perplexity単体モード以外）
+		if (!enableImageGen && !isPerplexitySolo && !selectedModel) {
 			alert('モデルを選択してください');
 			return;
 		}
@@ -569,10 +576,6 @@
 		loading = true;
 		streamingContent = '';
 		streamingReasoning = '';
-
-		// 検索設定をselectedSearchから設定
-		enableSearch = selectedSearch === 'tavily';
-		enablePerplexity = selectedSearch === 'perplexity';
 
 		// Add user message to UI
 		messages = [...messages, {
