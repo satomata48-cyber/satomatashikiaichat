@@ -85,7 +85,6 @@
 		{ id: 'x-ai/grok-4.1-fast:free', name: 'Grok 4.1 Fast', desc: '無料', icon: '🚀', contextLength: '131K', inputCost: 0, outputCost: 0 },
 		{ id: 'deepseek/deepseek-v3.2-speciale', name: 'DeepSeek V3.2 Speciale', desc: 'GPT-5超え・推論', icon: '🌊', reasoning: true, isNew: true, contextLength: '164K', inputCost: 0.28, outputCost: 0.40 },
 		{ id: 'deepseek/deepseek-v3.2', name: 'DeepSeek V3.2', desc: 'GPT-5同等・格安', icon: '🌊', isNew: true, contextLength: '164K', inputCost: 0.27, outputCost: 0.40 },
-		{ id: 'deepseek/deepseek-v3.2-exp', name: 'DeepSeek V3.2 Exp', desc: '実験版・最安', icon: '🌊', contextLength: '164K', inputCost: 0.21, outputCost: 0.32 },
 		{ id: 'google/gemini-2.5-flash-preview-09-2025', name: 'Gemini 2.5 Flash', desc: '推論・Google', icon: '💎', reasoning: true, contextLength: '1M', inputCost: 0.30, outputCost: 2.50 },
 		{ id: 'moonshotai/kimi-k2-thinking', name: 'Kimi K2', desc: '推論', icon: '🌙', reasoning: true, contextLength: '256K', inputCost: 0.45, outputCost: 2.35 },
 		{ id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', desc: '推論', icon: '🐋', reasoning: true, contextLength: '164K', inputCost: 0.30, outputCost: 1.20 },
