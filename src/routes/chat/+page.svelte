@@ -83,11 +83,11 @@
 
 	const openrouterModels: ModelInfo[] = [
 		{ id: 'x-ai/grok-4.1-fast:free', name: 'Grok 4.1 Fast', desc: '無料', icon: '🚀', contextLength: '131K', inputCost: 0, outputCost: 0 },
-		{ id: 'deepseek/deepseek-v3.2-speciale', name: 'DeepSeek V3.2 Speciale', desc: 'GPT-5超え・推論', icon: '🌊', reasoning: true, isNew: true, contextLength: '164K', inputCost: 0.28, outputCost: 0.40 },
-		{ id: 'deepseek/deepseek-v3.2', name: 'DeepSeek V3.2', desc: 'GPT-5同等・格安', icon: '🌊', isNew: true, contextLength: '164K', inputCost: 0.27, outputCost: 0.40 },
+		{ id: 'deepseek/deepseek-v3.2-speciale', name: 'DeepSeek V3.2 Speciale', desc: 'GPT-5超え・推論', icon: '/icons/deepseek.svg', reasoning: true, isNew: true, contextLength: '164K', inputCost: 0.28, outputCost: 0.40 },
+		{ id: 'deepseek/deepseek-v3.2', name: 'DeepSeek V3.2', desc: 'GPT-5同等・格安', icon: '/icons/deepseek.svg', isNew: true, contextLength: '164K', inputCost: 0.27, outputCost: 0.40 },
 		{ id: 'google/gemini-2.5-flash-preview-09-2025', name: 'Gemini 2.5 Flash', desc: '推論・Google', icon: '💎', reasoning: true, contextLength: '1M', inputCost: 0.30, outputCost: 2.50 },
 		{ id: 'moonshotai/kimi-k2-thinking', name: 'Kimi K2', desc: '推論', icon: '🌙', reasoning: true, contextLength: '256K', inputCost: 0.45, outputCost: 2.35 },
-		{ id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', desc: '推論', icon: '🐋', reasoning: true, contextLength: '164K', inputCost: 0.30, outputCost: 1.20 },
+		{ id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', desc: '推論', icon: '/icons/deepseek.svg', reasoning: true, contextLength: '164K', inputCost: 0.30, outputCost: 1.20 },
 		{ id: 'qwen/qwen3-next-80b-a3b-thinking', name: 'Qwen3 80B Think', desc: '推論・格安', icon: '🔮', reasoning: true, contextLength: '262K', inputCost: 0.12, outputCost: 1.20 },
 	];
 
@@ -217,6 +217,11 @@
 		// 知らないモデルの場合はモデルIDの最後の部分を表示
 		const parts = modelId.split('/');
 		return { name: parts[parts.length - 1], icon: '🤖' };
+	}
+
+	// アイコンがSVGパスかどうかを判定
+	function isSvgIcon(icon: string): boolean {
+		return icon.startsWith('/') && icon.endsWith('.svg');
 	}
 
 	// 1日あたりの会話回数を計算（1000円/月予算）
@@ -1266,7 +1271,11 @@
 									{imageModels.find(m => m.id === selectedImageModel)?.cost || '無料'}
 								</span>
 							{:else if currentModel}
-								<span class="text-sm sm:text-base">{currentModel.icon}</span>
+								{#if isSvgIcon(currentModel.icon)}
+									<img src={currentModel.icon} alt="" class="w-4 h-4 sm:w-5 sm:h-5" />
+								{:else}
+									<span class="text-sm sm:text-base">{currentModel.icon}</span>
+								{/if}
 								<span class="hidden sm:inline">{currentModel.name}</span>
 								<span class="hidden sm:inline px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{currentModel.contextLength}</span>
 								{#if currentModel.reasoning}
@@ -1387,7 +1396,11 @@
 								on:click={() => selectModel(model.id)}
 								class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-elevated'}"
 							>
-								<span class="text-base">{model.icon}</span>
+								{#if isSvgIcon(model.icon)}
+									<img src={model.icon} alt="" class="w-5 h-5" />
+								{:else}
+									<span class="text-base">{model.icon}</span>
+								{/if}
 								<span class="flex-1 text-left">{model.name}</span>
 								<span class="text-xs text-themed-text-secondary">{model.desc}</span>
 							</button>
@@ -1891,7 +1904,11 @@
 								on:click={() => selectModel(model.id)}
 								class="flex items-center gap-2 w-full px-3 py-3 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
 							>
-								<span class="text-lg flex-shrink-0">{model.icon}</span>
+								{#if isSvgIcon(model.icon)}
+									<img src={model.icon} alt="" class="w-6 h-6 flex-shrink-0" />
+								{:else}
+									<span class="text-lg flex-shrink-0">{model.icon}</span>
+								{/if}
 								<div class="flex-1 text-left min-w-0">
 									<div class="font-medium flex items-center gap-1.5">
 										{model.name}

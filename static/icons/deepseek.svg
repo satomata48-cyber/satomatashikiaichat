@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="deepseek-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F6EF7"/>
+      <stop offset="100%" style="stop-color:#6B8CFF"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="url(#deepseek-gradient)"/>
+  <path d="M30 45 C30 35, 45 30, 55 35 C65 40, 75 38, 78 42 C80 45, 78 50, 72 52 L70 53 C68 54, 65 53, 63 51 C60 48, 55 50, 52 52 C48 55, 42 58, 35 55 C28 52, 30 45, 30 45 Z" fill="white"/>
+  <circle cx="40" cy="44" r="3" fill="#4F6EF7"/>
+  <path d="M72 52 Q76 56, 72 60 Q68 58, 70 54" fill="white" opacity="0.8"/>
+</svg>

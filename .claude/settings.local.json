@@ -32,7 +32,8 @@
       "WebFetch(domain:api.together.ai)",
       "WebFetch(domain:novita.ai)",
       "WebFetch(domain:docs.tavily.com)",
-      "WebFetch(domain:tavily.com)"
+      "WebFetch(domain:tavily.com)",
+      "WebFetch(domain:uxwing.com)"
     ],
     "deny": [],
     "ask": []
