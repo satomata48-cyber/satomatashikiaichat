@@ -1214,6 +1214,104 @@
 							</svg>
 						</button>
 
+						<!-- Search Selector Dropdown -->
+						{#if showSearchSelector}
+							<div class="absolute bottom-full left-0 mb-2 bg-themed-surface border border-themed-border rounded-xl shadow-2xl w-[300px] sm:w-[400px] max-h-[70vh] overflow-hidden z-50">
+								<!-- Header -->
+								<div class="flex items-center justify-between p-3 border-b border-themed-border">
+									<h3 class="font-semibold text-white text-sm">Web検索エンジン</h3>
+									<button on:click={() => showSearchSelector = false} class="text-themed-text-secondary hover:text-white" aria-label="Close">
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+										</svg>
+									</button>
+								</div>
+
+								<!-- Content -->
+								<div class="p-2 space-y-1.5">
+									<!-- 検索OFF -->
+									<button
+										on:click={() => selectSearch('none')}
+										class="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-colors {selectedSearch === 'none' ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
+									>
+										<span class="text-base">❌</span>
+										<div class="flex-1 text-left min-w-0">
+											<div class="font-medium text-xs">検索OFF</div>
+											<div class="text-[11px] opacity-75">Web検索を使用しない</div>
+										</div>
+										<span class="px-1.5 py-0.5 text-[10px] bg-gray-600/30 text-gray-400 rounded">無料</span>
+										{#if selectedSearch === 'none'}
+											<svg class="w-4 h-4 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+											</svg>
+										{/if}
+									</button>
+
+									<!-- Tavily -->
+									<button
+										on:click={() => selectSearch('tavily')}
+										class="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-colors {selectedSearch === 'tavily' ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
+									>
+										<span class="text-base">🔍</span>
+										<div class="flex-1 text-left min-w-0">
+											<div class="font-medium text-xs">Tavily検索</div>
+											<div class="text-[11px] opacity-75">AI専用Web検索（10件取得）</div>
+										</div>
+										<span class="px-1.5 py-0.5 text-[10px] bg-amber-600/30 text-amber-400 rounded whitespace-nowrap">残{searchUsageRemaining ?? '---'}回</span>
+										{#if selectedSearch === 'tavily'}
+											<svg class="w-4 h-4 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+											</svg>
+										{/if}
+									</button>
+
+									<!-- Perplexity -->
+									<button
+										on:click={() => selectSearch('perplexity')}
+										class="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-colors {selectedSearch === 'perplexity' ? 'bg-green-600/20 border border-green-500/50 text-green-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
+									>
+										<span class="text-base">🔎</span>
+										<div class="flex-1 text-left min-w-0">
+											<div class="font-medium text-xs">Perplexity検索</div>
+											<div class="text-[11px] opacity-75">AI検索LLMで直接回答</div>
+										</div>
+										<span class="px-1.5 py-0.5 text-[10px] bg-green-600/30 text-green-400 rounded whitespace-nowrap">$1〜$5/1M</span>
+										{#if selectedSearch === 'perplexity'}
+											<svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+											</svg>
+										{/if}
+									</button>
+								</div>
+
+								<!-- Perplexityオプション -->
+								{#if selectedSearch === 'perplexity'}
+									<div class="p-2 border-t border-themed-border bg-themed-elevated/50">
+										<div class="text-[10px] text-themed-text-muted mb-1.5">Perplexityオプション</div>
+										<div class="flex gap-1.5 flex-wrap">
+											<button
+												on:click={() => perplexityModel = 'sonar'}
+												class="flex items-center gap-1 px-2 py-1 rounded border text-[10px] transition-colors {perplexityModel === 'sonar' ? 'bg-green-600 text-white border-green-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+											>
+												sonar <span class="opacity-75">$1/$1</span>
+											</button>
+											<button
+												on:click={() => perplexityModel = 'sonar-reasoning'}
+												class="flex items-center gap-1 px-2 py-1 rounded border text-[10px] transition-colors {perplexityModel === 'sonar-reasoning' ? 'bg-purple-600 text-white border-purple-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+											>
+												推論 <span class="opacity-75">$1/$5</span>
+											</button>
+											<button
+												on:click={() => perplexityMode = perplexityMode === 'withLLM' ? 'solo' : 'withLLM'}
+												class="flex items-center gap-1 px-2 py-1 rounded border text-[10px] transition-colors {perplexityMode === 'withLLM' ? 'bg-amber-600 text-white border-amber-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
+											>
+												🤖 AIで分析 {perplexityMode === 'withLLM' ? '✓' : ''}
+											</button>
+										</div>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</div>
 
 					<!-- DateTime Toggle -->
@@ -1282,6 +1380,94 @@
 							</svg>
 						</button>
 
+						<!-- Model Selector Dropdown -->
+						{#if showModelSelector}
+							<div class="absolute bottom-full left-0 mb-2 bg-themed-surface border border-themed-border rounded-xl shadow-2xl w-[320px] sm:w-[480px] md:w-[560px] max-h-[70vh] overflow-hidden z-50">
+								<!-- Header -->
+								<div class="flex items-center justify-between p-3 border-b border-themed-border">
+									<h3 class="font-semibold text-white text-sm">AIモデル選択</h3>
+									<button on:click={cancelModelSelection} class="text-themed-text-secondary hover:text-white" aria-label="Close">
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+										</svg>
+									</button>
+								</div>
+
+								<!-- モードタブ -->
+								<div class="p-2 border-b border-themed-border">
+									<div class="flex items-center gap-1 p-1 bg-themed-elevated rounded-lg">
+										<button
+											on:click={() => { enableImageGen = false; }}
+											class="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs transition-colors {!enableImageGen ? 'bg-primary-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
+										>
+											<span>💬</span> テキスト
+										</button>
+										<button
+											on:click={() => { enableImageGen = true; selectedSearch = 'none'; }}
+											class="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs transition-colors {enableImageGen ? 'bg-pink-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
+										>
+											<span>🎨</span> 画像
+										</button>
+									</div>
+								</div>
+
+								<!-- Content -->
+								<div class="p-2 max-h-[50vh] overflow-y-auto">
+									{#if enableImageGen}
+										<!-- 画像生成モデル -->
+										<div class="space-y-1.5">
+											{#each imageModels as model}
+												<button
+													on:click={() => { selectedImageModel = model.id; showModelSelector = false; }}
+													class="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-colors {selectedImageModel === model.id ? 'bg-pink-600/20 border border-pink-500/50 text-pink-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
+												>
+													<span class="text-base">🖼️</span>
+													<div class="flex-1 text-left min-w-0">
+														<div class="font-medium text-xs">{model.name}</div>
+														<div class="text-[11px] opacity-75">{model.desc}</div>
+													</div>
+													<span class="px-2 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded flex-shrink-0">{model.cost}</span>
+												</button>
+											{/each}
+										</div>
+									{:else}
+										<!-- テキスト生成モデル -->
+										<div class="space-y-1.5">
+											{#each getModels() as model}
+												<button
+													on:click={() => selectModel(model.id)}
+													class="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
+												>
+													<span class="text-base flex-shrink-0">{model.icon}</span>
+													<div class="flex-1 text-left min-w-0">
+														<div class="font-medium text-xs flex items-center gap-1.5">
+															{model.name}
+															{#if model.isNew}
+																<span class="px-1 py-0.5 text-[9px] font-bold bg-red-600 text-white rounded animate-pulse">NEW</span>
+															{/if}
+														</div>
+														<div class="text-[11px] opacity-75 truncate">{model.desc}</div>
+													</div>
+													<div class="flex items-center gap-1 flex-shrink-0">
+														<span class="px-1.5 py-0.5 text-[10px] bg-blue-600/30 text-blue-400 rounded">{model.contextLength}</span>
+														{#if model.reasoning}
+															<span class="px-1.5 py-0.5 text-[10px] bg-purple-600/30 text-purple-400 rounded">推論</span>
+														{/if}
+														<span class="px-1.5 py-0.5 text-[10px] bg-amber-600/30 text-amber-400 rounded whitespace-nowrap">${model.inputCost}/${model.outputCost}</span>
+													</div>
+													{#if selectedModel === model.id}
+														<svg class="w-4 h-4 text-primary-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+															<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+														</svg>
+													{/if}
+												</button>
+											{/each}
+										</div>
+										<p class="text-[10px] text-themed-text-muted mt-2 px-1">※コストは$/1M tokens（入力/出力）</p>
+									{/if}
+								</div>
+							</div>
+						{/if}
 					</div>
 				</div>
 
@@ -1677,113 +1863,6 @@
 	</div>
 {/if}
 
-<!-- Search Selector Modal -->
-{#if showSearchSelector}
-	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-		<div class="bg-themed-surface border border-themed-border rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
-			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-themed-border">
-				<h2 class="text-lg font-semibold text-white">Web検索エンジン選択</h2>
-				<button on:click={() => showSearchSelector = false} class="text-themed-text-secondary hover:text-white" aria-label="Close">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				</button>
-			</div>
-
-			<!-- Content -->
-			<div class="p-3 space-y-2">
-				<!-- 検索OFF -->
-				<button
-					on:click={() => selectSearch('none')}
-					class="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm transition-colors {selectedSearch === 'none' ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
-				>
-					<span class="text-xl">❌</span>
-					<div class="flex-1 text-left">
-						<div class="font-medium">検索OFF</div>
-						<div class="text-xs opacity-75">Web検索を使用しない</div>
-					</div>
-					{#if selectedSearch === 'none'}
-						<svg class="w-5 h-5 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-						</svg>
-					{/if}
-				</button>
-
-				<!-- Tavily -->
-				<button
-					on:click={() => selectSearch('tavily')}
-					class="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm transition-colors {selectedSearch === 'tavily' ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
-				>
-					<span class="text-xl">🔍</span>
-					<div class="flex-1 text-left">
-						<div class="font-medium">Tavily検索</div>
-						<div class="text-xs opacity-75">AI専用Web検索エンジン（10件取得）</div>
-						<div class="text-xs text-amber-400 mt-0.5">月1000回まで（残{searchUsageRemaining !== null ? searchUsageRemaining : '---'}回）</div>
-					</div>
-					{#if selectedSearch === 'tavily'}
-						<svg class="w-5 h-5 text-primary-400" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-						</svg>
-					{/if}
-				</button>
-
-				<!-- Perplexity -->
-				<button
-					on:click={() => selectSearch('perplexity')}
-					class="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm transition-colors {selectedSearch === 'perplexity' ? 'bg-green-600/20 border border-green-500/50 text-green-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
-				>
-					<span class="text-xl">🔎</span>
-					<div class="flex-1 text-left">
-						<div class="font-medium">Perplexity検索</div>
-						<div class="text-xs opacity-75">AI検索LLMで直接回答</div>
-						<div class="text-xs text-green-400 mt-0.5">回数制限なし（$1/$1〜$5）</div>
-					</div>
-					{#if selectedSearch === 'perplexity'}
-						<svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-						</svg>
-					{/if}
-				</button>
-			</div>
-
-			<!-- Perplexityオプション -->
-			{#if selectedSearch === 'perplexity'}
-				<div class="p-3 border-t border-themed-border bg-themed-elevated/50">
-					<div class="text-xs text-themed-text-muted mb-2">Perplexityオプション</div>
-					<div class="flex gap-2 flex-wrap">
-						<button
-							on:click={() => perplexityModel = 'sonar'}
-							class="flex items-center gap-1 px-3 py-1.5 rounded border text-xs transition-colors {perplexityModel === 'sonar' ? 'bg-green-600 text-white border-green-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
-						>
-							sonar <span class="opacity-75">$1/$1</span>
-						</button>
-						<button
-							on:click={() => perplexityModel = 'sonar-reasoning'}
-							class="flex items-center gap-1 px-3 py-1.5 rounded border text-xs transition-colors {perplexityModel === 'sonar-reasoning' ? 'bg-purple-600 text-white border-purple-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
-						>
-							推論 <span class="opacity-75">$1/$5</span>
-						</button>
-						<button
-							on:click={() => perplexityMode = perplexityMode === 'withLLM' ? 'solo' : 'withLLM'}
-							class="flex items-center gap-1 px-3 py-1.5 rounded border text-xs transition-colors {perplexityMode === 'withLLM' ? 'bg-amber-600 text-white border-amber-500' : 'bg-themed-surface border-themed-border text-themed-text-secondary hover:bg-themed-elevated'}"
-						>
-							🤖 AIchatで分析 {perplexityMode === 'withLLM' ? '✓' : ''}
-						</button>
-					</div>
-				</div>
-			{/if}
-
-			<!-- Footer -->
-			<div class="p-3 border-t border-themed-border">
-				<button on:click={() => showSearchSelector = false} class="btn-primary w-full">
-					閉じる
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
-
 <!-- Template Selector Modal -->
 {#if showTemplateSelector}
 	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1838,96 +1917,3 @@
 	</div>
 {/if}
 
-<!-- Model Selector Modal -->
-{#if showModelSelector}
-	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={cancelModelSelection}>
-		<div class="bg-themed-surface border border-themed-border rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" on:click|stopPropagation>
-			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-themed-border">
-				<h2 class="text-lg font-semibold text-white">AIモデル選択</h2>
-				<button on:click={cancelModelSelection} class="text-themed-text-secondary hover:text-white" aria-label="Close">
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				</button>
-			</div>
-
-			<!-- モードタブ -->
-			<div class="p-3 border-b border-themed-border">
-				<div class="flex items-center gap-1 p-1 bg-themed-elevated rounded-lg">
-					<button
-						on:click={() => { enableImageGen = false; }}
-						class="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-md text-sm transition-colors {!enableImageGen ? 'bg-primary-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
-					>
-						<span>💬</span> テキスト生成
-					</button>
-					<button
-						on:click={() => { enableImageGen = true; selectedSearch = 'none'; }}
-						class="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-md text-sm transition-colors {enableImageGen ? 'bg-pink-600 text-white' : 'text-themed-text-secondary hover:text-themed-text'}"
-					>
-						<span>🎨</span> 画像生成
-					</button>
-				</div>
-			</div>
-
-			<!-- Content -->
-			<div class="p-3 max-h-[50vh] overflow-y-auto">
-				{#if enableImageGen}
-					<!-- 画像生成モデル -->
-					<div class="space-y-2">
-						{#each imageModels as model}
-							<button
-								on:click={() => { selectedImageModel = model.id; showModelSelector = false; }}
-								class="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm transition-colors {selectedImageModel === model.id ? 'bg-pink-600/20 border border-pink-500/50 text-pink-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
-							>
-								<span class="text-lg">🖼️</span>
-								<span class="flex-1 text-left truncate">{model.name}</span>
-								<span class="text-xs opacity-75">{model.desc}</span>
-								<span class="px-2 py-0.5 text-xs bg-pink-600/30 text-pink-400 rounded">{model.cost}</span>
-							</button>
-						{/each}
-					</div>
-				{:else}
-					<!-- テキスト生成モデル -->
-					<div class="space-y-2">
-						{#each getModels() as model}
-							<button
-								on:click={() => selectModel(model.id)}
-								class="flex items-center gap-2 w-full px-3 py-3 rounded-lg text-sm transition-colors {selectedModel === model.id ? 'bg-primary-600/20 border border-primary-500/50 text-primary-400' : 'bg-themed-elevated text-themed-text-secondary hover:bg-themed-border/50'}"
-							>
-								<span class="text-lg">{model.icon}</span>
-								<div class="flex-1 text-left min-w-0">
-									<div class="font-medium truncate flex items-center gap-1.5">
-										{model.name}
-										{#if model.isNew}
-											<span class="px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white rounded animate-pulse">NEW</span>
-										{/if}
-									</div>
-									<div class="flex items-center gap-1 mt-0.5 flex-wrap">
-										<span class="px-1.5 py-0.5 text-xs bg-blue-600/30 text-blue-400 rounded">{model.contextLength}</span>
-										{#if model.reasoning}
-											<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
-										{/if}
-										<span class="px-1.5 py-0.5 text-xs bg-green-600/30 text-green-400 rounded">{calcDailyConversations(model)}</span>
-									</div>
-								</div>
-								{#if selectedModel === model.id}
-									<svg class="w-5 h-5 text-primary-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-									</svg>
-								{/if}
-							</button>
-						{/each}
-					</div>
-				{/if}
-			</div>
-
-			<!-- Footer -->
-			<div class="p-3 border-t border-themed-border">
-				<button on:click={cancelModelSelection} class="w-full px-4 py-2 rounded-lg text-sm bg-themed-elevated text-themed-text-secondary hover:bg-themed-border transition-colors">
-					キャンセル
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
