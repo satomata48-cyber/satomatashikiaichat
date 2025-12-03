@@ -309,6 +309,7 @@ export function isReasoningModel(model: string): boolean {
 		'deepseek-ai/DeepSeek-R1-Distill-Llama-70B',
 		'deepseek-ai/DeepSeek-R1-0528-tput',
 		'deepseek/deepseek-r1',
+		'deepseek/deepseek-v3.2-speciale',
 		'moonshotai/kimi-k2-thinking',
 		'moonshotai/Kimi-K2-Thinking',
 		'Qwen/Qwen3-Next-80B-A3B-Thinking',
@@ -317,11 +318,6 @@ export function isReasoningModel(model: string): boolean {
 		'google/gemini-2.5-flash-preview',
 	];
 	return reasoningModels.some(m => model.toLowerCase().includes(m.toLowerCase().split('/').pop() || ''));
-}
-
-// Check if model is Perplexity Sonar (has built-in web search with citations)
-export function isSonarModel(model: string): boolean {
-	return model.toLowerCase().includes('perplexity/sonar');
 }
 
 // Sonar search - uses Sonar to search and returns SearchResult format
@@ -387,70 +383,4 @@ export async function searchWithSonar(
 	});
 
 	return results;
-}
-
-// Stream chunk with citations support
-export interface StreamChunkWithCitations {
-	type: 'content' | 'reasoning' | 'citations';
-	text?: string;
-	citations?: string[];
-}
-
-// Parse SSE stream for Sonar models (extracts citations)
-export async function* parseSSEStreamWithCitationsGenerator(stream: ReadableStream<Uint8Array>): AsyncGenerator<StreamChunkWithCitations> {
-	const reader = stream.getReader();
-	const decoder = new TextDecoder();
-	let buffer = '';
-	let collectedCitations: string[] = [];
-
-	try {
-		while (true) {
-			const { done, value } = await reader.read();
-
-			if (done) {
-				break;
-			}
-
-			buffer += decoder.decode(value, { stream: true });
-			const lines = buffer.split('\n');
-			buffer = lines.pop() || '';
-
-			for (const line of lines) {
-				if (line.startsWith('data: ')) {
-					const data = line.slice(6).trim();
-					if (data === '[DONE]') {
-						// Yield collected citations at the end
-						if (collectedCitations.length > 0) {
-							yield { type: 'citations', citations: collectedCitations };
-						}
-						return;
-					}
-					if (data) {
-						try {
-							const json = JSON.parse(data);
-
-							// Check for citations in the response
-							if (json.citations && Array.isArray(json.citations)) {
-								collectedCitations = json.citations;
-							}
-
-							const content = json.choices?.[0]?.delta?.content;
-							if (content) {
-								yield { type: 'content', text: content };
-							}
-						} catch {
-							// Skip invalid JSON
-						}
-					}
-				}
-			}
-		}
-
-		// Yield citations if we have them (in case [DONE] wasn't received)
-		if (collectedCitations.length > 0) {
-			yield { type: 'citations', citations: collectedCitations };
-		}
-	} finally {
-		reader.releaseLock();
-	}
 }

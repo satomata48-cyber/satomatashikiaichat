@@ -21,7 +21,7 @@
 				</div>
 				<div class="flex items-center gap-4">
 					<a href="/login" class="btn-ghost">ログイン</a>
-					<a href="/register" class="btn-primary">無料で始める</a>
+					<a href="/login" class="btn-primary">無料で始める</a>
 				</div>
 			</div>
 		</nav>
@@ -36,7 +36,7 @@
 				あなただけのAIアシスタント
 			</p>
 			<div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-				<a href="/register" class="btn-primary text-lg px-8 py-3">
+				<a href="/login" class="btn-primary text-lg px-8 py-3">
 					無料で始める
 					<svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -111,8 +111,8 @@
 				<p class="text-dark-300 mb-8">
 					登録は無料です。メールアドレスとパスワードだけで始められます。
 				</p>
-				<a href="/register" class="btn-primary text-lg px-8 py-3">
-					アカウントを作成
+				<a href="/login" class="btn-primary text-lg px-8 py-3">
+					ログインして始める
 				</a>
 			</div>
 		</div>

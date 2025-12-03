@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { searchWeb, chatWithAI, parseSSEStreamGenerator, parseSSEStreamWithReasoningGenerator, parseSSEStreamWithCitationsGenerator, isReasoningModel, isSonarModel, searchWithSonar } from '$lib/server/ai';
+import { searchWeb, chatWithAI, parseSSEStreamGenerator, parseSSEStreamWithReasoningGenerator, isReasoningModel, searchWithSonar } from '$lib/server/ai';
 import { createMessage, getMessagesByChat, createChat, getChatById, recordUsage, incrementSearchUsage, getSearchUsage } from '$lib/server/db';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
@@ -177,12 +177,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			});
 		}
 		const useReasoning = isReasoningModel(model);
-		const useSonar = isSonarModel(model);
 
 		// Collect full response for saving
 		let fullResponse = '';
 		let fullReasoning = '';
-		let sonarCitations: string[] = [];
 
 		const responseStream = new ReadableStream({
 			async start(controller) {
@@ -197,24 +195,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				}
 
 				try {
-					if (useSonar) {
-						// Use Sonar-specific parser to extract citations
-						for await (const chunk of parseSSEStreamWithCitationsGenerator(aiStream)) {
-							if (chunk.type === 'content' && chunk.text) {
-								fullResponse += chunk.text;
-								controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: chunk.text })}\n\n`));
-							} else if (chunk.type === 'citations' && chunk.citations) {
-								sonarCitations = chunk.citations;
-								// Convert citations (URLs) to sources format
-								const citationSources = chunk.citations.map((url, i) => ({
-									title: `Source ${i + 1}`,
-									url: url,
-									content: ''
-								}));
-								controller.enqueue(encoder.encode(`data: ${JSON.stringify({ sources: citationSources })}\n\n`));
-							}
-						}
-					} else if (useReasoning) {
+					if (useReasoning) {
 						// Use reasoning-aware stream parser
 						for await (const chunk of parseSSEStreamWithReasoningGenerator(aiStream)) {
 							if (chunk.type === 'reasoning') {
@@ -235,16 +216,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 					// Save assistant message
 					if (fullResponse) {
-						// For Sonar models, save citations as sources
-						let sourcesToSave = searchResults ? JSON.stringify(searchResults) : undefined;
-						if (sonarCitations.length > 0) {
-							const citationSources = sonarCitations.map((url, i) => ({
-								title: `Source ${i + 1}`,
-								url: url,
-								content: ''
-							}));
-							sourcesToSave = JSON.stringify(citationSources);
-						}
+						const sourcesToSave = searchResults ? JSON.stringify(searchResults) : undefined;
 						await createMessage(
 							platform.env.DB,
 							chatId,
