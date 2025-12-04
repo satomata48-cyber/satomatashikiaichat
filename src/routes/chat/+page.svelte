@@ -224,21 +224,22 @@
 		return icon.startsWith('/') && icon.endsWith('.svg');
 	}
 
-	// 1日あたりの会話回数を計算（1000円/月予算）
+	// 毎月$10で何回質問できるかを計算
 	// 平均1会話あたり: 入力1000トークン + 出力500トークン と想定
-	function calcDailyConversations(model: ModelInfo): string {
+	function calcMonthlyConversations(model: ModelInfo): string {
 		// 無料モデルの場合
 		if (model.inputCost === 0 && model.outputCost === 0) {
-			return '無料';
+			return '無制限';
 		}
-		const monthlyBudgetYen = 1000; // 1000円/月
-		const exchangeRate = 150; // 1ドル = 150円
-		const monthlyBudgetUsd = monthlyBudgetYen / exchangeRate; // 約$6.67
-		const dailyBudget = monthlyBudgetUsd / 30;
+		const monthlyBudgetUsd = 10; // $10/月
 		const avgInputTokens = 1000;
 		const avgOutputTokens = 500;
 		const costPerConversation = (model.inputCost * avgInputTokens / 1_000_000) + (model.outputCost * avgOutputTokens / 1_000_000);
-		return `約${Math.floor(dailyBudget / costPerConversation)}回/日`;
+		const monthlyCount = Math.floor(monthlyBudgetUsd / costPerConversation);
+		if (monthlyCount >= 10000) {
+			return `約${Math.floor(monthlyCount / 1000)}千回/月`;
+		}
+		return `約${monthlyCount.toLocaleString()}回/月`;
 	}
 
 	function selectProvider(provider: Provider) {
@@ -1931,7 +1932,7 @@
 									{#if model.reasoning}
 										<span class="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-400 rounded">推論</span>
 									{/if}
-									<span class="px-1.5 py-0.5 text-xs bg-amber-600/30 text-amber-400 rounded whitespace-nowrap">${model.inputCost}/${model.outputCost}</span>
+									<span class="px-1.5 py-0.5 text-xs bg-emerald-600/30 text-emerald-400 rounded whitespace-nowrap">{calcMonthlyConversations(model)}</span>
 								</div>
 								{#if selectedModel === model.id}
 									<svg class="w-5 h-5 text-primary-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -1941,7 +1942,7 @@
 							</button>
 						{/each}
 					</div>
-					<p class="text-xs text-themed-text-muted mt-3 px-1">※コストは$/1M tokens（入力/出力）</p>
+					<p class="text-xs text-themed-text-muted mt-3 px-1">※回数は$10/月での目安（1回=入力1000+出力500トークン想定）</p>
 				{/if}
 			</div>
 
