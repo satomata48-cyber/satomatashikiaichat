@@ -33,7 +33,10 @@
       "WebFetch(domain:novita.ai)",
       "WebFetch(domain:docs.tavily.com)",
       "WebFetch(domain:tavily.com)",
-      "WebFetch(domain:uxwing.com)"
+      "WebFetch(domain:uxwing.com)",
+      "Bash(dir /s /b \"C:\\Users\\lipto\\desktop\\satomatashikiaichat\\node_modules\\@lobehub\\icons\\es\")",
+      "Bash(npm uninstall:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

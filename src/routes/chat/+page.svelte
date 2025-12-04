@@ -913,7 +913,7 @@
 	<!-- Main Content -->
 	<div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
 		<!-- Header -->
-		<header class="h-14 flex-shrink-0 border-b border-themed-border flex items-center px-4 gap-2 sm:gap-4 overflow-visible relative z-50" style="padding-top: env(safe-area-inset-top);">
+		<header class="h-14 flex-shrink-0 border-b border-themed-border flex items-center px-4 gap-2 sm:gap-4 overflow-visible relative z-50 bg-themed-surface" style="padding-top: env(safe-area-inset-top);">
 			<button on:click={() => sidebarOpen = !sidebarOpen} class="md:hidden p-2 -ml-2 text-themed-text-secondary active:bg-themed-elevated rounded-lg" aria-label="Toggle sidebar">
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -1095,7 +1095,11 @@
 								{#if message.role === 'assistant' && message.model}
 									{@const modelInfo = getModelDisplayInfo(message.model)}
 									<div class="mt-2 flex items-center gap-1 text-xs text-themed-text-muted">
-										<span>{modelInfo?.icon}</span>
+										{#if modelInfo?.icon && isSvgIcon(modelInfo.icon)}
+											<img src={modelInfo.icon} alt="" class="w-4 h-4" />
+										{:else}
+											<span>{modelInfo?.icon}</span>
+										{/if}
 										<span>{modelInfo?.name}</span>
 									</div>
 								{/if}
@@ -1147,7 +1151,11 @@
 									{#if selectedModel}
 										{@const modelInfo = getModelDisplayInfo(selectedModel)}
 										<div class="mt-2 flex items-center gap-1 text-xs text-themed-text-muted">
-											<span>{modelInfo?.icon}</span>
+											{#if modelInfo?.icon && isSvgIcon(modelInfo.icon)}
+												<img src={modelInfo.icon} alt="" class="w-4 h-4" />
+											{:else}
+												<span>{modelInfo?.icon}</span>
+											{/if}
 											<span>{modelInfo?.name}</span>
 										</div>
 									{/if}
