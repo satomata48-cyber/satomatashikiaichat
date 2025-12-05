@@ -1493,10 +1493,10 @@
 <!-- History Modal -->
 {#if showHistory}
 	<div class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-		<div class="bg-themed-surface border border-themed-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md sm:mx-4 max-h-[85vh] flex flex-col overflow-hidden">
+		<div class="bg-themed-surface border border-themed-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm sm:mx-4 max-h-[70vh] flex flex-col overflow-hidden">
 			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-themed-border">
-				<h2 class="text-lg font-semibold text-white">使用履歴</h2>
+			<div class="flex items-center justify-between p-3 border-b border-themed-border flex-shrink-0">
+				<h2 class="text-base font-semibold text-white">使用履歴</h2>
 				<button on:click={() => showHistory = false} class="text-themed-text-secondary hover:text-white" aria-label="Close history">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -1505,7 +1505,7 @@
 			</div>
 
 			<!-- Calendar -->
-			<div class="p-4 overflow-y-auto flex-1">
+			<div class="p-3 overflow-y-auto flex-1">
 				<!-- Month Navigation -->
 				<div class="flex items-center justify-between mb-4">
 					<button on:click={() => changeMonth(-1)} class="p-2 text-themed-text-secondary hover:text-white rounded-lg hover:bg-themed-elevated">
@@ -1632,8 +1632,8 @@
 			</div>
 
 			<!-- Footer -->
-			<div class="p-4 border-t border-themed-border flex-shrink-0">
-				<button on:click={() => showHistory = false} class="btn-primary w-full">
+			<div class="p-3 border-t border-themed-border flex-shrink-0">
+				<button on:click={() => showHistory = false} class="btn-primary w-full py-2 text-sm">
 					閉じる
 				</button>
 			</div>
