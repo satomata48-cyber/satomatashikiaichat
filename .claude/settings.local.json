@@ -36,7 +36,15 @@
       "WebFetch(domain:uxwing.com)",
       "Bash(dir /s /b \"C:\\Users\\lipto\\desktop\\satomatashikiaichat\\node_modules\\@lobehub\\icons\\es\")",
       "Bash(npm uninstall:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(for id in 542f7fac 7536b5d4 c9847110 d3036412 90ce5455 bcb4ffba 74a7b55b a9ba6d12 bb5517c8 3b12fb09 3c8283e6 a90ae6e3 94339ce1 8ab388dc 3f6efee3 3349733a 075f1c17 3b7958ce 08d75af0 2ae9ac5e 946f558b 7fbe41cf 4bc72f63 ce2020aa 4e7e4a26)",
+      "Bash(do echo \"Deleting $id...\")",
+      "Bash(done)",
+      "Bash(wrangler pages deployment --help:*)",
+      "Bash(curl:*)",
+      "Bash(powershell -Command \"Invoke-RestMethod -Uri ''https://api.cloudflare.com/client/v4/accounts/bde867b9de4420c93bdc797d254ea437/pages/projects/satomatashikiaichat/deployments'' -Headers @{Authorization=''Bearer 91IQLHko2K8qH0fdibNOnRwVlOWf2UpnlOI-G8-D7tQ.aYsQ6q0vM3VkFI9DSTxnUjIy7XPJdjzF4N-dV-_sUtg''} | ConvertTo-Json -Depth 10\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\Users\\lipto\\desktop\\satomatashikiaichat\\delete-deployments.ps1\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\Users\\lipto\\desktop\\satomatashikiaichat\\delete-all-deployments.ps1\")"
     ],
     "deny": [],
     "ask": []
